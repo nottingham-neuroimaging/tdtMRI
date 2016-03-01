@@ -124,7 +124,7 @@ function tdtMRI
   AMfrequency = 15; % default amplitude modulation frequency(0 = no modulation)
   NLevel = 0;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
   SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
-                                  % a signal is detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
+                                  % a signal is just detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
                                   % (i.e. a signal is just detectable in a noise level that's about 5.9 dB louder)
                                   % this will be subtracted to the desired noise level (instead of adding it to the signal)
@@ -706,7 +706,7 @@ YPos = YPos-(Height+YGap);
 %             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
 %                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
 %                                     % correcting for differences in amplitudes of the impulse)
-            calibrationLevel = 84.3; % calibration leve estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
+            calibrationLevel = 84.3; % calibration level estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
             transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
           case 'None'
             calibrationLevel = 68.5;
@@ -1071,8 +1071,8 @@ YPos = YPos-(Height+YGap);
     DF = 1/(sampleDuration*N);
     frq = DF*(1:N/2);
 
-    lev = -10*log10(lcfErb(frq));
-    eeFilter = 10.^(lev/20);
+    lev = -10*log10(lcfErb(frq));   %these two lines are equivalent to:
+    eeFilter = 10.^(lev/20);        % eeFilter = 1./sqrt(lcfErb(frq))   (see also lcfMakeNoise)
 
     NF = lcfNErb(F);
     F1 = lcfInvNErb(NF-0.5);
