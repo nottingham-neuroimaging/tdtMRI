@@ -1007,8 +1007,22 @@ YPos = YPos-(Height+YGap);
   function noise = makeNoiseBand(FSig,BW,N)
     
     AMod = AMfrequency/1000; %Amplitude modulation
-    if isinf(BW)
+    if isinf(BW)    %if bandwidth is infinite, make an equally-exciting noise
       noise=lcfMakeNoise(N,sampleDuration,AMod);
+    elseif BW==0    %if bandwith=0, make a pure tone
+      noise = sin(2*pi*FSig*sampleDuration*(0:N-1));
+      if logical(AMod) %apply amplitude modulation
+        modenv = sin(2*pi*AMod*sampleDuration*(0:N-1));
+        noise = (1+modenv).*noise;    
+      end
+
+      noise = noise/sqrt(mean(noise.^2));  %normalize amplitude to rms=1
+      if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
+%         noise = applyInverseInsertsTransfer(noise);
+        [~,whichFrequency] = min(abs(transferFunction.frequencies-FSig)); %find closest frequency in transfer function 
+        noise=noise./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
+      end
+      
     else
       evenN = N+mod(N,2); %make N even
       power2N = 2^ceil(log2(evenN)); %find next larger power of 2
