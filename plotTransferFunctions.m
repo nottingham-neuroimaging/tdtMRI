@@ -1,6 +1,6 @@
 function plotTransferFunctions
 
-files = [dir([pwd '\*clicks_*.csv']);dir([pwd '\*click_*.mat'])];
+files = [dir([pwd '\*clicks_*.csv']);dir([pwd '\*click_*.mat']);dir([pwd '\*.bin'])];
 
 startTime=-1; %in ms
 endTime=5;  %in ms
