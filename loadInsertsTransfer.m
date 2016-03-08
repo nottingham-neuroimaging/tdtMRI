@@ -18,6 +18,12 @@
       fieldname = fieldnames(data);
       data = data.(fieldname{1});
       data = data(:,[1 3 2]);
+    case '.bin'
+      [h,Fs]=load_filter(impulseFilePath);
+      zeroLocation = 200; %set arbitrary 0 time sample just before impulse reponse
+      data = ((1:length(h))' - zeroLocation)*1/Fs;
+      data(zeroLocation,2)= 0.25; %pulse with arbitrary voltage
+      data(:,3)=h;
   end
   %first colum is the time in seconds
   time = data(:,1)*1000; %convert to ms
