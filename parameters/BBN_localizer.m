@@ -15,16 +15,16 @@ if isNotDefined('params')
   params = struct;
 end
 if fieldIsNotDefined(params,'onset')
-  params.onset = 4000;
+  params.onset = 0;
 end
 if fieldIsNotDefined(params,'level')
-  params.level = 70;
+  params.level = 80;
 end
 if fieldIsNotDefined(params,'nStimOn')
   params.nStimOn = 2;
 end
 if fieldIsNotDefined(params,'nStimOff')
-  params.nStimOff = 2;
+  params.nStimOff = 0;
 end
 
 if nargout==1
