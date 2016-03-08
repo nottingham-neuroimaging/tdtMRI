@@ -699,6 +699,9 @@ YPos = YPos-(Height+YGap);
             calibrationLevel = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
             calibrationLevel = 72.0; % calibration 04/03/2016 right side
             transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts (seems to correspond to right side)
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFile = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
+            transferFunctionFile = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
           case 'NNL Headphones'
 %             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
 %                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
@@ -706,6 +709,9 @@ YPos = YPos-(Height+YGap);
             calibrationLevel = 83.2; % calibration 04/03/2016 left side
             calibrationLevel = 84.4; % calibration 04/03/2016 right side
             transferFunctionFile = 'HD_clicks_752avg_8V.csv';  %csv file containing the impulse reponse of the headphones
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFile = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
+            transferFunctionFile = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
           case 'Sennheiser HD 212Pro'
 %             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
 %                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
@@ -714,11 +720,17 @@ YPos = YPos-(Height+YGap);
             calibrationLevel = 77.4; % calibration 04/03/2016 left side
             calibrationLevel = 81.6; % calibration 04/03/2016 right side
             transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFile = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
+            transferFunctionFile = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
           case 'Sensimetrics S14'
             calibrationLevel = 80.4; % calibration 04/03/2016 left side
             calibrationLevel = 78.8; % calibration 04/03/2016 right side
-            transferFunctionFile = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sennheiser headphones
-            transferFunctionFile = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sennheiser headphones
+            transferFunctionFile = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFile = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFile = 'S14insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFile = 'S14insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
           case 'None'
             calibrationLevel = 65.5;
         end
@@ -736,7 +748,8 @@ YPos = YPos-(Height+YGap);
         
         %load insert transfer inverse filter parameters
         if ~strcmp(headphones,'None')
-          transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
+%           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
+          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFile]);
         end
         
         %write background noise to TDT
