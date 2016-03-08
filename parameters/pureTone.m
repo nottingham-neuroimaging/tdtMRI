@@ -21,16 +21,16 @@ if fieldIsNotDefined(params,'bandwidth')
   params.bandwidth = 0;
 end
 if fieldIsNotDefined(params,'onset')
-  params.onset = 4000;
+  params.onset = 2000;
 end
 if fieldIsNotDefined(params,'level')
   params.level = 65.49;
 end
 if fieldIsNotDefined(params,'nStimOn')
-  params.nStimOn = 2;
+  params.nStimOn = 1;
 end
 if fieldIsNotDefined(params,'nStimOff')
-  params.nStimOff = 2;
+  params.nStimOff = 0;
 end
 
 if nargout==1
