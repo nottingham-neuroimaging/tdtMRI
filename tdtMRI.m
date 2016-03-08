@@ -91,8 +91,8 @@ function tdtMRI
 
   TDT = true;    %set fo False to debug without switching the TDT on
   displaySounds = false;
-  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'None'};
-  headphones = 'NNL Inserts';
+  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'None'};
+  headphones = 'None';
   maxVoltage = 10; %saturation voltage of TDT
   if TDT
     getTagValDelay = .5; % the approximate time it takes to get values from the RP2 (in sec)
@@ -114,9 +114,10 @@ function tdtMRI
   completedRuns=0;          %to keep track of completed runs
 
   HB7Gain = -18;            % attenuation setting of the TDT HB7 Headphone Driver (in dB)
-  NNLGain = 6;              % amplification setting of NNL amplifier at the 7T scanner (in dB)
+  NNLGain = [-40 -27.4 -18.6 -12.21 -6.2 0]; %attenuation corresponding to the 6 NNL amplifier 'Acoustic Level' settings
+  NNLsetting = 6;              % amplification setting of NNL amplifier at the 7T scanner (in dB)
   HB7CalibGain = -27;       % attenuation setting of the TDT HB7 Headphone Driver at which calibration was done
-  NNLCalibGain = 6;         % amplification setting of NNL amplifier at the 7T scanner at which calibration was done
+  NNLCalibSetting = 6;         % amplification setting of NNL amplifier at the 7T scanner at which calibration was done
   transferFunction=struct();
   calibrationGain = [];
   noiseBufferSize = [];
@@ -578,7 +579,8 @@ YPos = YPos-(Height+YGap);
           else
             displayMessage({'RP2 circuit loaded and running!'})
           end
-          displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB and NNL gain to %.0f !',HB7Gain, NNLGain)});
+          displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB and NNL gain to %.0f !',HB7Gain, NNLsetting)});
+          displayMessage('==> Make sure the red BNC is connected to the HB7 left output');
           
           %check that the sampling rate of the circuit is the same as the one set in this program
           % (alternatively, could read the sampling rate from the circuit)
@@ -694,32 +696,42 @@ YPos = YPos-(Height+YGap);
         switch headphones
           case 'NNL Inserts'
             calibrationLevel = 65.5;  % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the inserts with the above calibration settings (TDT output = -27dB and NNL output = 6)
-            calibrationLevel = calibrationLevel + 3; %corresponding level for a 1voltRMS noise
-            transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts
+            calibrationLevel = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
+            calibrationLevel = 72.0; % calibration 04/03/2016 right side
+            transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts (seems to correspond to right side)
           case 'NNL Headphones'
 %             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
 %                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
             calibrationLevel = 82.3; % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the NNL headphones with the above calibration settings
-            calibrationLevel = calibrationLevel + 3; %corresponding level for a 1voltRMS noise
+            calibrationLevel = 83.2; % calibration 04/03/2016 left side
+            calibrationLevel = 84.4; % calibration 04/03/2016 right side
             transferFunctionFile = 'HD_clicks_752avg_8V.csv';  %csv file containing the impulse reponse of the headphones
           case 'Sennheiser HD 212Pro'
 %             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
 %                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
 %                                     % correcting for differences in amplitudes of the impulse)
             calibrationLevel = 84.3; % calibration level estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
+            calibrationLevel = 77.4; % calibration 04/03/2016 left side
+            calibrationLevel = 81.6; % calibration 04/03/2016 right side
             transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
+          case 'Sensimetrics S14'
+            calibrationLevel = 80.4; % calibration 04/03/2016 left side
+            calibrationLevel = 78.8; % calibration 04/03/2016 right side
+            transferFunctionFile = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sennheiser headphones
+            transferFunctionFile = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sennheiser headphones
           case 'None'
-            calibrationLevel = 68.5;
+            calibrationLevel = 65.5;
         end
-        calibrationGain = -calibrationLevel+HB7CalibGain+NNLCalibGain-HB7Gain-NNLGain; % correction factor (in dB) to apply to the 
+        calibrationLevel = calibrationLevel + 3; %corresponding level for a 1voltRMS noise
+        calibrationGain = -calibrationLevel+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
         %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings
-        %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLCalibGain=6dB, it was recorded that a 1 kHz sinewave
+        %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
         %with peak amplitude 1V (rms=1/sqrt(2)) results in a 65.5dB SPL sound level. Therefore an arbitrary signal with rms=1V would result in
         %a 68.5 dB SPL level (*sqrt(2) <-> +3dB)
         %Therefore, to present a 1Vrms signal at 70 dB SPL with the same attenuation/amplification settings as during calibration,
         %the signal would have to be amplified by 70 - 68.5 = 1.5 dB.
-        %However, if the attenuation/amplification settings change (say HB7Gain = -24dB and NNLGain = 9dB), the signal would have
-        %to be amplified (attenuated) by 70 - 68.5 + HB7CalibGain + NNLCalibGain - HB7Gain - NNLGain = 70-68.5-27+6+24-9 = -4.5 dB
+        %However, if the attenuation/amplification settings change (say HB7Gain = -24dB and NNLGain = -6.2dB), the signal would have
+        %to be amplified (attenuated) by 70 - 68.5 + HB7CalibGain + NNLCalibGain - HB7Gain - NNLGain = 70-68.5-27+0+24+6.2 = 4.7 dB
         % (= 70 + calibrationGain) in order to result in the same output level of 70 dB SPL.
         
         %load insert transfer inverse filter parameters
