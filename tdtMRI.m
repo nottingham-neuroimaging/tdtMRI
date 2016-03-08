@@ -1031,8 +1031,10 @@ YPos = YPos-(Height+YGap);
       noise = noise/sqrt(mean(noise.^2));  %normalize amplitude to rms=1
       if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
 %         noise = applyInverseInsertsTransfer(noise);
-        [~,whichFrequency] = min(abs(transferFunction.frequencies-FSig)); %find closest frequency in transfer function 
-        noise=noise./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
+%         [~,whichFrequency] = min(abs(transferFunction.frequencies-FSig)); %find closest frequency in transfer function 
+%         noise=noise./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
+        %use interpolation to to find attenuation coefficient at pure tone frequency
+        noise = noise./10.^(interp1(transferFunction.frequencies,transferFunction.fft,FSig)/20);
       end
       
     else
@@ -1127,9 +1129,15 @@ YPos = YPos-(Height+YGap);
 
   % ***** applyInverseInsertsTransfer
   function noise = applyInverseInsertsTransfer(noise)
-      %first downsample headphones transfer fft coefficients
-      downsampleFactor = round((1/sampleDuration)/length(noise)/transferFunction.freqResolution);
-      insertsFFT = transferFunction.fft(downsampleFactor:downsampleFactor:end);
+%       %first downsample headphones transfer fft coefficients
+%       downsampleFactor = round((1/sampleDuration)/length(noise)/transferFunction.freqResolution);
+%       insertsFFT = transferFunction.fft(downsampleFactor:downsampleFactor:end);
+    %instead of downsampling, interpolate the transfer function at the
+    %frequency resolution of the fft for this particular sound (this takes
+    %longer than the previous 2 lines but it works for any resolution and
+    %doens't require the original transfer function to be oversampled (by an
+    %integer factor) relative to the desired fft)
+      insertsFFT = interp1(transferFunction.frequencies,transferFunction.fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
       insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
       
 %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
