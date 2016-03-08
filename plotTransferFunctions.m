@@ -5,7 +5,9 @@ files = [dir([pwd '\*clicks_*.csv']);dir([pwd '\*click_*.mat']);dir([pwd '\*.bin
 startTime=-1; %in ms
 endTime=5;  %in ms
 
-figure('position',get(0,'monitorPositions'));
+monitorPosition = get(0,'monitorPositions');
+monitorPosition = monitorPosition(1,:);
+figure('position',monitorPosition);
 h3 = subplot(6,3,[2 3 5 6]);
 hold on
 ylabel('Level (dB)');
