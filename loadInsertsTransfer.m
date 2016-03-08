@@ -48,21 +48,21 @@
   impulseResponse = impulseResponse(samplesToKeep).*win;
   impulse = impulse(samplesToKeep).*win;
 
-  %decimate/downsample
-  dsFactor = tdtSampleDuration/scopeSampleDuration; %downsampling factor we're aiming for
-  maxDsFactor =10; %maximum decimate/downsampling factor applied at once
-  while dsFactor>0
-    if dsFactor>maxDsFactor
-      thisDsFactor=maxDsFactor;
-    else
-      thisDsFactor=dsFactor;
-    end
-    impulseResponse = decimate(impulseResponse,thisDsFactor);
-    impulse = decimate(impulse,thisDsFactor);
-    time = downsample(time,thisDsFactor);
-    scopeSampleDuration = scopeSampleDuration*thisDsFactor;
-    dsFactor=floor(dsFactor/maxDsFactor);
-  end
+%   %decimate/downsample
+%   dsFactor = tdtSampleDuration/scopeSampleDuration; %downsampling factor we're aiming for
+%   maxDsFactor =10; %maximum decimate/downsampling factor applied at once
+%   while dsFactor>0
+%     if dsFactor>maxDsFactor
+%       thisDsFactor=maxDsFactor;
+%     else
+%       thisDsFactor=dsFactor;
+%     end
+%     impulseResponse = decimate(impulseResponse,thisDsFactor);
+%     impulse = decimate(impulse,thisDsFactor);
+%     time = downsample(time,thisDsFactor);
+%     scopeSampleDuration = scopeSampleDuration*thisDsFactor;
+%     dsFactor=floor(dsFactor/maxDsFactor);
+%   end
 
   % compute FFT 
   nFFT = 2^nextpow2(maxSamples);
