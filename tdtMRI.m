@@ -92,7 +92,7 @@ function tdtMRI
   TDT = true;    %set fo False to debug without switching the TDT on
   displaySounds = false;
   headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'None'};
-  headphones = 'None';
+  headphones = 'Sensimetrics S14';
   maxVoltage = 10; %saturation voltage of TDT
   if TDT
     getTagValDelay = .5; % the approximate time it takes to get values from the RP2 (in sec)
@@ -119,7 +119,8 @@ function tdtMRI
   HB7CalibGain = -27;       % attenuation setting of the TDT HB7 Headphone Driver at which calibration was done
   NNLCalibSetting = 6;         % amplification setting of NNL amplifier at the 7T scanner at which calibration was done
   transferFunction=struct();
-  calibrationGain = [];
+  calibrationGainLeft = [];
+  calibrationGainRight = [];
   noiseBufferSize = [];
   
   AMfrequency = 15; % default amplitude modulation frequency(0 = no modulation)
@@ -696,46 +697,49 @@ YPos = YPos-(Height+YGap);
         switch headphones
           case 'NNL Inserts'
             calibrationLevel = 65.5;  % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the inserts with the above calibration settings (TDT output = -27dB and NNL output = 6)
-            calibrationLevel = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
-            calibrationLevel = 72.0; % calibration 04/03/2016 right side
+            calibrationLevelLeft  = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
+            calibrationLevelRight = 72.0; % calibration 04/03/2016 right side
             transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts (seems to correspond to right side)
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFile = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
-            transferFunctionFile = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
+            transferFunctionFileLeft = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
           case 'NNL Headphones'
 %             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
 %                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
             calibrationLevel = 82.3; % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the NNL headphones with the above calibration settings
-            calibrationLevel = 83.2; % calibration 04/03/2016 left side
-            calibrationLevel = 84.4; % calibration 04/03/2016 right side
+            calibrationLevelLeft  = 83.2; % calibration 04/03/2016 left side
+            calibrationLevelRight = 84.4; % calibration 04/03/2016 right side
             transferFunctionFile = 'HD_clicks_752avg_8V.csv';  %csv file containing the impulse reponse of the headphones
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFile = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
-            transferFunctionFile = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
+            transferFunctionFileLeft = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
           case 'Sennheiser HD 212Pro'
 %             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
 %                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
 %                                     % correcting for differences in amplitudes of the impulse)
             calibrationLevel = 84.3; % calibration level estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
-            calibrationLevel = 77.4; % calibration 04/03/2016 left side
-            calibrationLevel = 81.6; % calibration 04/03/2016 right side
+            calibrationLevelLeft  = 77.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 81.6; % calibration 04/03/2016 right side
             transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFile = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
-            transferFunctionFile = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
+            transferFunctionFileLeft = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
           case 'Sensimetrics S14'
-            calibrationLevel = 80.4; % calibration 04/03/2016 left side
-            calibrationLevel = 78.8; % calibration 04/03/2016 right side
+            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
             transferFunctionFile = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
             transferFunctionFile = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFile = 'S14insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-            transferFunctionFile = 'S14insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileLeft = 'S14insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'S14insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
           case 'None'
-            calibrationLevel = 65.5;
+            calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphones. Use these as the level of a 1kHz sinewave 
+            calibrationLevelRight = 81.6;  % so that its max voltage is 1 (on the corresponding side)
         end
-        calibrationLevel = calibrationLevel + 3; %corresponding level for a 1voltRMS noise
-        calibrationGain = -calibrationLevel+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
+        calibrationLevelLeft = calibrationLevelLeft + 3; %corresponding level for a 1voltRMS noise
+        calibrationLevelRight = calibrationLevelRight + 3; %corresponding level for a 1voltRMS noise
+        calibrationGainLeft = -calibrationLevelLeft+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); 
+        calibrationGainRight = -calibrationLevelRight+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
         %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings
         %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
         %with peak amplitude 1V (rms=1/sqrt(2)) results in a 65.5dB SPL sound level. Therefore an arbitrary signal with rms=1V would result in
@@ -749,14 +753,17 @@ YPos = YPos-(Height+YGap);
         %load insert transfer inverse filter parameters
         if ~strcmp(headphones,'None')
 %           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
-          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFile]);
+          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileLeft]);
+          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileRight]);
         end
         
         %write background noise to TDT
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
         if TDT
-          invoke(RP2,'WriteTagV','FNoise',0,fNoise);  % fill the noise buffer            
-          invoke(RP2,'SetTagVal','NAmp',10^((NLevel+calibrationGain-LEE)/20)); %set the noise level
+          invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
+          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)); %set the noise level
+          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)); %set the noise level
+          invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
         end
         
         %write log file header
@@ -843,8 +850,8 @@ YPos = YPos-(Height+YGap);
       invoke(RP2,'SetTagVal','SignalSize',signalSize()+signalExtraZeroes); %this is when to stop the serSource if a trigger has not been received
       invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); % this is how long to prevent the next trigger to be received
       invoke(RP2,'SetTagVal','NTrials',length(stimulus)+1);     %set this to something larger than the number of dynamic scans
-      invoke(RP2,'WriteTagV','Signal',0,signal(1:signalSize()/2));   %write first half of first stimulus to buffer
-      invoke(RP2,'WriteTagV','Signal',signalSize()/2,zeros(1,signalExtraZeroes));   %write zeroes at the end of buffer
+      invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:signalSize()/2)/maxVoltage*(2^15-1)));   %write first half of first stimulus to buffer
+      invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(zeros(2,signalExtraZeroes)/maxVoltage*(2^15-1)));   %write zeroes at the end of buffer
       invoke(RP2,'SoftTrg',1);                                  %start run
       displayMessage({'Starting noise'});
     end
@@ -905,7 +912,7 @@ YPos = YPos-(Height+YGap);
       thisSyncTR=round(syncTR+(rand(1)-0.5)*10); %add random value to sync TR
 %     thisSyncTR=round(syncTR+rand(1)*1000));          
       if TDT %write second half of signal to buffer (trial i) while the first half is playing
-        invoke(RP2,'WriteTagV','Signal',signalSize()/2,signal(signalSize()/2+1:end));      
+        invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(signal(:,signalSize()/2+1:end)/maxVoltage*(2^15-1)));      
         invoke(RP2,'SetTagVal','SynTR',thisSyncTR/sampleDuration);      %set duration of simulated trigger TR in samples (with a  bit of jitter)    
       end
       
@@ -939,7 +946,7 @@ YPos = YPos-(Height+YGap);
       end
 
       if TDT % write first half of new stimulus to buffer (cond i+1) while second half is being played
-        invoke(RP2,'WriteTagV','Signal',0,signal(1:signalSize()/2));   
+        invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:signalSize()/2)/maxVoltage*(2^15-1)));   
       end
  
       % wait for RP2 to receive the next scanner/simulated trigger 
@@ -968,8 +975,8 @@ YPos = YPos-(Height+YGap);
     updateTrialInfo([],[],[]);
     if TDT    %stop stimulus presentation 
       invoke(RP2,'SoftTrg',2); %prevents trigger from sending new signal
-      invoke(RP2,'WriteTagV','Signal',0,zeros(1,signalBufferMaxSize)); %erase all signal in  serial source 
-%       invoke(RP2,'WriteTagV','Signal',signalSize()/2,signal(signalSize()/2+1:end)); %write second half of last (empty) stimulus to buffer
+      invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(zeros(2,signalBufferMaxSize)/maxVoltage*(2^15-1))); %erase all signal in  serial source 
+%       invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(signal(:,signalSize()/2+1:end)/maxVoltage*(2^15-1))); %write second half of last (empty) stimulus to buffer
 %       (this should be enough, but sometimes there's something left form previous runs, not sure why...)
     end
     if strcmp(lastButtonPressed,'stop run')
@@ -1000,19 +1007,22 @@ YPos = YPos-(Height+YGap);
     Gate = round(gateDuration/sampleDuration);
     Gate = Gate + mod(Gate,2); %even number of gate samples 
 
-    signal = zeros(1,totalSamples+Gate);
+    signal = zeros(2,totalSamples+Gate);
     currentSample = 0;
     for i = 1:size(stimulus.frequency,1)
       for j = 1:size(stimulus.frequency,2)
         if ~isnan(stimulus.frequency(i,j)) && ~isnan(stimulus.bandwidth(i,j)) && ~isnan(stimulus.level(i,j))
           thisSignal = makeNoiseBand(stimulus.frequency(i,j),stimulus.bandwidth(i,j),samples(i,j)+Gate);
-          thisSignal = thisSignal.*10^((stimulus.level(i,j)+calibrationGain)/20);  
-          signal(currentSample+(1:samples(i,j)+Gate))= signal(currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal,Gate);
+          thisSignal(1,:) = thisSignal(1,:).*10^((stimulus.level(i,j)+calibrationGainLeft)/20);  
+          thisSignal(2,:) = thisSignal(2,:).*10^((stimulus.level(i,j)+calibrationGainRight)/20);  
+          signal(1,currentSample+(1:samples(i,j)+Gate))= signal(1,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(1,:),Gate);
+          signal(2,currentSample+(1:samples(i,j)+Gate))= signal(2,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(2,:),Gate);
+%           signal(1,currentSample+(1:samples(i,j)+Gate))= zeros(size(signal(1,currentSample+(1:samples(i,j)+Gate))));
         end
         currentSample = currentSample+samples(i,j);
       end
     end
-    signal = signal(Gate/2+(1:totalSamples));
+    signal = signal(:,Gate/2+(1:totalSamples));
     signal = lcfGate(signal,Gate);
 
     % A sinusoid with a peak amplitude of 1 has an RMS amplitude of 1/sqrt(2) = -3dB less than RMS = 1; 
@@ -1023,9 +1033,9 @@ YPos = YPos-(Height+YGap);
 
   % ***** lcfGate *****
   function stim = lcfGate(stim,Gate)
-    env = cos(pi/2*(0:Gate-1)/(Gate-1));
-    stim(1:Gate) = stim(1:Gate).*sqrt(1-env.^2);
-    stim(end-Gate+1:end) = stim(end-Gate+1:end).*env;
+    env = repmat(cos(pi/2*(0:Gate-1)/(Gate-1)),size(stim,1),1);
+    stim(:,1:Gate) = stim(:,1:Gate).*sqrt(1-env.^2);
+    stim(:,end-Gate+1:end) = stim(:,end-Gate+1:end).*env;
   end
   
   % ********** makeNoiseBand **********
@@ -1041,13 +1051,14 @@ YPos = YPos-(Height+YGap);
         noise = (1+modenv).*noise;    
       end
 
-      noise = noise/sqrt(mean(noise.^2));  %normalize amplitude to rms=1
+      noise = repmat(noise/sqrt(mean(noise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
       if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
-%         noise = applyInverseInsertsTransfer(noise);
+        for i=1:2
 %         [~,whichFrequency] = min(abs(transferFunction.frequencies-FSig)); %find closest frequency in transfer function 
-%         noise=noise./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
-        %use interpolation to to find attenuation coefficient at pure tone frequency
-        noise = noise./10.^(interp1(transferFunction.frequencies,transferFunction.fft,FSig)/20);
+%         noise(i,:)=noise(i,:)./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
+        %use interpolation to find attenuation coefficient at pure tone frequency
+            noise(i,:) = noise(i,:)./10.^(interp1(transferFunction(i).frequencies,transferFunction(1).fft,FSig)/20);
+        end
       end
       
     else
@@ -1065,13 +1076,13 @@ YPos = YPos-(Height+YGap);
         modenv = sin(2*pi*AMod*sampleDuration*(0:power2N-1));
         noise = (1+modenv).*noise;    
       end
-      noise = noise/sqrt(mean(noise.^2));  %normalize amplitude to rms=1
+      noise = repmat(noise/sqrt(mean(noise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
 
       if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
-        noise = applyInverseInsertsTransfer(noise);
+        noise = applyInverseTransfer(noise);
       end
 
-      noise = noise((power2N-evenN)/2+(1:N)); %keep central portion
+      noise = noise(:,(power2N-evenN)/2+(1:N)); %keep central portion
     end
   end
   
@@ -1096,13 +1107,13 @@ YPos = YPos-(Height+YGap);
       fNoise = (1+modenv).*fNoise;    
     end
     
-    fNoise = fNoise/sqrt(mean(fNoise.^2));  %normalize amplitude to rms=1
+    fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
     
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
-      fNoise = applyInverseInsertsTransfer(fNoise);
+      fNoise = applyInverseTransfer(fNoise);
     end
     
-    fNoise = fNoise(1:N);
+    fNoise = fNoise(:,1:N);
   end
 
   % ***** lcfLEE *****
@@ -1140,8 +1151,8 @@ YPos = YPos-(Height+YGap);
   end
 
 
-  % ***** applyInverseInsertsTransfer
-  function noise = applyInverseInsertsTransfer(noise)
+  % ***** applyInverseTransfer
+  function noise = applyInverseTransfer(noise)
 %       %first downsample headphones transfer fft coefficients
 %       downsampleFactor = round((1/sampleDuration)/length(noise)/transferFunction.freqResolution);
 %       insertsFFT = transferFunction.fft(downsampleFactor:downsampleFactor:end);
@@ -1150,14 +1161,16 @@ YPos = YPos-(Height+YGap);
     %longer than the previous 2 lines but it works for any resolution and
     %doens't require the original transfer function to be oversampled (by an
     %integer factor) relative to the desired fft)
-      insertsFFT = interp1(transferFunction.frequencies,transferFunction.fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
+    for i=1:2
+      insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
       insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
       
 %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
 %       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
 %       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
 
-      noise = real(ifft(fft(noise)./10.^(insertsFFT/20)));
+      noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
+    end
   end
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RP2-related functions
   
@@ -1187,7 +1200,8 @@ YPos = YPos-(Height+YGap);
   
   % ***** plotSignal *****
   function [hCursorT, hCursorF] = plotSignal(signal)
-
+    
+    signal = signal(1,:);
     time = sampleDuration*(0:length(signal)-1)/1000;
     hold(hTimeseries,'off');
     plot(hTimeseries,time,signal,'k')
