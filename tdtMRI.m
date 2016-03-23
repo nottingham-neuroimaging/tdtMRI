@@ -1057,7 +1057,7 @@ YPos = YPos-(Height+YGap);
 %         [~,whichFrequency] = min(abs(transferFunction.frequencies-FSig)); %find closest frequency in transfer function 
 %         noise(i,:)=noise(i,:)./10.^(transferFunction.fft(whichFrequency)/20); %and attenuate by corresponding coefficient 
         %use interpolation to find attenuation coefficient at pure tone frequency
-            noise(i,:) = noise(i,:)./10.^(interp1(transferFunction(i).frequencies,transferFunction(1).fft,FSig)/20);
+            noise(i,:) = noise(i,:)./10.^(interp1(transferFunction(i).frequencies,transferFunction(i).fft,FSig)/20);
         end
       end
       
