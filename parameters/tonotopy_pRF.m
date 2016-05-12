@@ -29,26 +29,20 @@ end
 if fieldIsNotDefined(params,'highFrequency')
     params.highFrequency = 8;
 end
-if fieldIsNotDefined(params,'level')
-    params.level = 70;
-end
-% if fieldIsNotDefined(params,'bandwidth')
-%   params.bandwidth = 0;
-% end
-if fieldIsNotDefined(params,'onset')
-    params.onset = 1.5;
-end
 if fieldIsNotDefined(params,'nFrequencies')
-    params.nFrequencies = 500;
+    params.nFrequencies = 150;
+end
+if fieldIsNotDefined(params,'nRepeats')
+    params.nRepeats = 2;
 end
 if fieldIsNotDefined(params,'nNull')
     params.nNull = 4;  %ratio of null trials - 1/nNull
 end
-if fieldIsNotDefined(params,'blockDur')
-    params.blockDur = 2000;
+if fieldIsNotDefined(params,'nBaseline')
+    params.nBaseline = 6;  %ratio of base line blocks - 1/nNull
 end
 if fieldIsNotDefined(params,'nMorseTrain')
-    params.nMorseTrain = 8; % number of beeps in train
+    params.nMorseTrain = 7; % number of beeps in train
 end
 if fieldIsNotDefined(params,'blockOnA')
     params.blockOnA = 50;
@@ -59,14 +53,29 @@ end
 if fieldIsNotDefined(params,'intStimGap')
     params.intStimGap = 50;
 end
+if fieldIsNotDefined(params,'bandwidthERB')
+    params.bandwidthERB = 1;
+end
+if fieldIsNotDefined(params,'onset')
+    params.onset = 2500;
+end
+if fieldIsNotDefined(params,'level')
+    params.level = 70;
+end
+if fieldIsNotDefined(params,'blockDur')
+    params.blockDur = 2000; % morse train duration - ms
+end
+if fieldIsNotDefined(params,'AquistionType')
+    params.AquistionType = 1; % 1 = TR = block duration ie continuous
+    % 0 = TR > block duration ie sparse
+end
 
 if nargout==1
     return;
 end
 
-
 allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
-allFrequencies = repmat(allFrequencies,nRepeats);
+allFrequencies = repmat(allFrequencies,1,params.nRepeats);
 ix = randperm(length(allFrequencies));
 allFrequencies = allFrequencies(ix);
 lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
@@ -77,47 +86,94 @@ allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
 allduration = [50 50 50 200 200 200 200];
 % nStimsInTrain = floor((TR-params.onset)/params.soa);
 
-c=0;
+
 stimulus.frequency=[];
 stimulus.duration=[];
 stimulus.level=[];
 stimulus.bandwidth=[];
 stimulus.name=[];
 stimulus.number=[];
+% create frequency moorse code trains
+c=0;
 for i=1:length(allFrequencies)
-    %conditions with only one frequency (adapter)
     c=c+1;
-    % same frequencie for each index (c)
-    % make frequency varible random then index normally
-    % how to randomise moorse code pattern?
-    stimulus(c).frequency =  [repmat([allFrequencies(i) NaN],1,params.nMorseTrain) NaN];
-    % loop duration index - length of number of frequencies
+    freqStimulus(c).frequency =  [repmat([allFrequencies(i) NaN],1,params.nMorseTrain) NaN];
     ix = randperm(params.nMorseTrain);
     dur = allduration(ix);
     for ii = 1:length(allduration)
-        stimulus(c).duration =  [repmat([dur(ii) params.intStimGap],1,params.nMorseTrain) NaN];
+        freqStimulus(c).duration =  [repmat([dur(ii) params.intStimGap],1,params.nMorseTrain) NaN];
     end
-    stimulus(c).bandwidth  = [NaN repmat([allBandwidths(i) NaN],1,params.nMorseTrain) NaN];
-    stimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
-    
-%       if ismember(c,params.adapterFrequencies)
-%         usedForAdaptation(c)= 1;
-%       else
-%         usedForAdaptation(c)=0;
-%       end
+    freqStimulus(c).bandwidth  = [repmat([allBandwidths(i) NaN],1,params.nMorseTrain) NaN];
+    freqStimulus(c).level = params.level;
+    freqStimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
+end
+% create silent block
+silenceStimulus.frequency = NaN;
+silenceStimulus.duration =  params.blockDur; % modify to be length of frequency block automatically
+silenceStimulus.bandwidth  = NaN;
+silenceStimulus.level = NaN;
+silenceStimulus.name = sprintf('Silence');
+
+% create presentation groups
+nBlocks = length(allFrequencies)/params.nNull;
+x = 0;
+for i = 1:nBlocks
+    x=x+1;
+    % silience
+    blockStimulus(x) = silenceStimulus;
+    blockStimulus(x+1) = freqStimulus(x);
+    blockStimulus(x+2) = freqStimulus(x+1);
+    blockStimulus(x+3) = freqStimulus(x+2);
+    x = x+nBlocks;
 end
 
-nBuffers = length(allFrequencies)/nNull;
-for i = 1:nBuffers
-    c=c+1;
-    
-%loop to create groups
-% 4 blocks
-% 1 silence 3 tones
-% randomise for continious scanning
+% if aquistion continuous randomise where silience is
+if aquistionType == 1
+    ix = randperm(length(blockStimulus));
+    blockStimulus = blockStimulus(ix);
 end
 
+nGroups= length(allFrequencies)/params.nBaseline;
+x = 0;
+for i = 1:nGroups
+    x=x+1;
+    % randomise y to move silent group
+    y = 0:params.nBaseline;
+    ix = randperm(params.nBaseline);
+    y = y(ix);
+    for ii = 0:params.nBaseline;
+    % use if to select silent
+    z = y(ii);
+    if z == 1
+        stimulus(x+z) = silenceStimulus;
+        stimulus(x+z+1) = silenceStimulus;
+        stimulus(x+z+2) = silenceStimulus;
+        stimulus(x+z+3) = silenceStimulus;
+    else
+    stimulus(x+z) = blockStimulus(x+z);
+    stimulus(x+z+1) = blockStimulus(x+z+1);
+    stimulus(x+z+2) = blockStimulus(x+z+2);
+    stimulus(x+z+3) = blockStimulus(x+z+3);
+    end
+    end
+    x = x+nGroups;
 end
+
+% if aquistion continuous
+if aquistionType == 1
+    ix = randperm(length(stimulus));
+    stimulus = stimulus(ix);
+end
+
+for i = 1:length(stimulus)
+    stimulus(i).number = i;
+end
+
+runTime = length(stimulus) * params.blockDur/60;
+
+end
+
+
 
 function out = isNotDefined(name)
 
@@ -138,5 +194,3 @@ end
 function f = lcfInvNErb(nerb)
 f = 1/4.37*(10.^(nerb/21.4)-1);
 end
-
-
