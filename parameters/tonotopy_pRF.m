@@ -42,7 +42,7 @@ if fieldIsNotDefined(params,'nFrequencies')
     params.nFrequencies = 500;
 end
 if fieldIsNotDefined(params,'nNull')
-    params.nNull = 3;  %number of null trials
+    params.nNull = 4;  %ratio of null trials - 1/nNull
 end
 if fieldIsNotDefined(params,'blockDur')
     params.blockDur = 2000;
@@ -107,11 +107,15 @@ for i=1:length(allFrequencies)
 %       end
 end
 
+nBuffers = length(allFrequencies)/nNull;
+for i = 1:nBuffers
+    c=c+1;
+    
 %loop to create groups
 % 4 blocks
 % 1 silence 3 tones
 % randomise for continious scanning
-
+end
 
 end
 
