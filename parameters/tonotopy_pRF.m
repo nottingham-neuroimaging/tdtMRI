@@ -1,4 +1,4 @@
-function [params,stimulus] = pureTone(params,nRepeatsPerRun,TR)
+function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,TR)
 
 % TO DO
 % change params based on TR
