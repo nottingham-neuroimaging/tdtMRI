@@ -18,13 +18,13 @@ if fieldIsNotDefined(params,'onset')
   params.onset = 0;
 end
 if fieldIsNotDefined(params,'level')
-  params.level = 80;
+  params.level = 75;
 end
 if fieldIsNotDefined(params,'nStimOn')
   params.nStimOn = 2;
 end
 if fieldIsNotDefined(params,'nStimOff')
-  params.nStimOff = 0;
+  params.nStimOff = 2;
 end
 
 if nargout==1
