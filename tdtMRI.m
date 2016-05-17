@@ -1225,6 +1225,7 @@ YPos = YPos-(Height+YGap);
     axis(hSpectrogram,'tight'); 
     colormap(hSpectrogram,jet); 
     hCursorF = plot(hSpectrogram,[0 0],get(hSpectrogram,'Ylim'),'k');
+    set(hSpectrogram,'XLim',[0 TR/1000]);
     set(get(hSpectrogram,'XLabel'),'String','Time (s)','FontName','Arial','FontSize',10)
     set(get(hSpectrogram,'YLabel'),'String','Frequency (Hz)','FontName','Arial','FontSize',10)
 
