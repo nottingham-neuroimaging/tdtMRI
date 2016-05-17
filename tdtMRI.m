@@ -101,16 +101,23 @@ function tdtMRI
   end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 7500;          %the expected delay between image acquisitions (scanner pulses) in milliseconds
-  minTR = 0;          % the minimum delay between consecutive received scanner pulses (useful to skip scanner pulses in continuous sequences)
-  gateDuration = 10;  %the stimulus ramp time. this is applied to each bandpass noise 
+  TR = 7500;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
+  stimTR = 2500;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
+  minTDTcycle = 5000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
+                      % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
+                      % before receiving the next one
+  TDTcycle = ceil(minTDTcycle/TR)*TR;  %the approximate time of a full cycle of the main program loop
+  minTR = TDTcycle-TR/2;  % the minimum delay between consecutive received scanner pulses (useful to skip scanner pulses in continuous sequences)
+  nStimTRs = TDTcycle/stimTR; %number of stimTR that fit in a TR
+  nTRs = round(TDTcycle/stimTR);    %number of stimTRs that fit in a TDT cycle
+  gateDuration = 10;  % the stimulus ramp time. this is applied to each bandpass noise 
                       % in the stimulus, as well as at the start and end
                       % of each stimulus
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
   syncTR = 7500;            % delay between simulated scanner pulses
   nRepeatsPerRun = 4;       %number of times the set of unique stimuli is repeated in a run
-  currentRun=0;   
+  currentRun=0;    
   completedRuns=0;          %to keep track of completed runs
 
   HB7Gain = -18;            % attenuation setting of the TDT HB7 Headphone Driver (in dB)
@@ -170,7 +177,7 @@ function tdtMRI
       'closeRequestFcn',{@mainCallback,'QuitExp'});
 
   Width = 0.2;
-  Height = 0.035;
+  editHeight = 0.035;
   XGap = 0.025;
   YGap = 0.0075;
   XPos = 0.525; 
@@ -181,84 +188,84 @@ function tdtMRI
   %%%%%%%%%%%%%%%% text/edit controls to change parameters
   uicontrol('Parent',hMainFigure,...                      %Participants's initials
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width Height],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','Participants''s initials:');
   hParticipant = uicontrol('Parent',hMainFigure,...
       'BackgroundColor',[1 1 1],...
     'Callback',{@mainCallback,'Participant'},...
-      'Position',[XPos+Width+XGap YPos Width Height],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',participant,...
       'Style','edit');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % Number of epochs/run
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width Height],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','Number of epochs/run:');
   hEpochsPerRun = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
     'Callback',{@mainCallback,'nEpochsPerRun'},...
-      'Position',[XPos+Width+XGap YPos Width Height],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(nRepeatsPerRun),...
       'Style','edit');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % TR (expected time between received scanner pulses
       'BackgroundColor',mGray,...                          % this is also the duration of the synthesized sound sequence)
-      'Position',[XPos YPos Width/2 Height],...
+      'Position',[XPos YPos Width/2 editHeight],...
       'Style','text',...
       'String','TR (sec):');
   hTR = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
     'Callback',{@mainCallback,'TR'},...
-      'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 Height],...
+      'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 editHeight],...
       'String',num2str(TR/1000),...
       'Style','edit');
 
   uicontrol('Parent',hMainFigure,...                       % min TR (minimum waiting time after receiving a scanner pulse
       'BackgroundColor',mGray,...                          % before the next pulse can be received)
-      'Position',[XPos+Width+XGap YPos Width/2 Height],...
+      'Position',[XPos+Width+XGap YPos Width*2/3 editHeight],...
       'Style','text',...
-      'String','min TR (sec):');
-  hMinTR = uicontrol('Parent',hMainFigure, ...
+      'String','Stim TR (sec):');
+  hStimTR = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
-    'Callback',{@mainCallback,'minTR'},...
-      'Position',[XPos+3*(Width+XGap)/2 YPos (Width-XGap)/2 Height],...
-      'String',num2str(minTR/1000),...
+      'Callback',{@mainCallback,'stimTR'},...
+      'Position',[XPos+Width*5/3+XGap*3/2 YPos Width/3-XGap/2 editHeight],...
+      'String',num2str(stimTR/1000),...
       'Style','edit');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width Height],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','Noise Level (dB):');
   hNLevel = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'noiseLevel'},...
-      'Position',[XPos+Width+XGap YPos Width Height],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(NLevel),...
       'Style','edit');
 
-YPos = YPos-(Height+YGap);
+YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       %AM frequency of background noise level
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width Height],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','AM Frequency (Hz):');
   hAMfrequency = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'AMfrequency'},...
-      'Position',[XPos+Width+XGap YPos Width Height],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(AMfrequency),...
       'Style','edit');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                      %Condition parameter file
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width Height],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','Parameter Function:');
   
@@ -275,78 +282,78 @@ YPos = YPos-(Height+YGap);
     hParamsFunction = uicontrol('Parent',hMainFigure, ... %create a popup menu to select the parameter function
         'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'paramFunction'},...
-        'Position',[XPos+Width+XGap YPos Width Height],...
+        'Position',[XPos+Width+XGap YPos Width editHeight],...
         'String',parameterFunctionsList,...
         'Style','popup');
   else %in case no parameter function is found (unlikely), replace the popup menu by an edit box and a browser
     hParamsFunction = uicontrol('Parent',hMainFigure, ...
         'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'paramFunction'},...
-        'Position',[XPos+Width+XGap YPos 0.1 Height],...
+        'Position',[XPos+Width+XGap YPos 0.1 editHeight],...
         'Style','edit');
     uicontrol('Parent',hMainFigure, ...
         'BackgroundColor',mGray,...
       'Callback',{@mainCallback,'Browse'},...
         'String','Browse',...
-        'Position',[0.8 YPos 0.15 Height],...
+        'Position',[0.8 YPos 0.15 editHeight],...
         'Style','pushbutton');
   end
 
   %put a number of edit boxes for parameters specific to the selected
   %parameter function
   for iParam = 1:nAddParam
-    YPos = YPos-(Height+YGap);
+    YPos = YPos-(editHeight+YGap);
     hParamNames(iParam) = uicontrol('Parent',hMainFigure,...    %Additional parameters
         'BackgroundColor',mGray,...
-        'Position',[XPos YPos Width Height],...
+        'Position',[XPos YPos Width editHeight],...
         'Enable','off',...
         'Style','text',...
         'String','Unused');
     hParams(iParam) = uicontrol('Parent',hMainFigure, ...
         'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'Parameter',iParam},...
-        'Position',[XPos+Width+XGap YPos Width Height],...
+        'Position',[XPos+Width+XGap YPos Width editHeight],...
         'Enable','off',...
         'Style','edit');
   end
 
   %%%%%%%%%%%%%%%% text controls to display run/trial information
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   hNScans = uicontrol('Parent',hMainFigure,...              %Number of dynamic scans
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos 2*Width+XGap Height],...
+      'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
       'String','Number of dynamic scans:');
 
-  YPos = YPos-(Height+2*YGap);
+  YPos = YPos-(editHeight+2*YGap);
   hCurrentRun = uicontrol('Parent',hMainFigure,...          %Current run
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos 2*Width+XGap Height],...
+      'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
       'String','Current run:');
 
-  YPos = YPos-(Height+YGap);
-  hCurrentTrial = uicontrol('Parent',hMainFigure,...        %Current trial
+  YPos = YPos-(editHeight+YGap);
+  hcurrentTrigger = uicontrol('Parent',hMainFigure,...        %Current trial
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos 2*Width+XGap Height],...
+      'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
-      'String','Current trial:');
+      'String','Current scan:');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   hCurrentCondition = uicontrol('Parent',hMainFigure,...    %Current condition
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos 2*Width+XGap Height],...
+      'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
       'String','Current condition:');
 
-  YPos = YPos-(Height+YGap);
+  YPos = YPos-(editHeight+YGap);
   hRemainingTime = uicontrol('Parent',hMainFigure,...       %Time remaining
       'BackgroundColor',mGray,...
-      'Position',[XPos YPos 2*Width+XGap Height],...
+      'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
       'String','Time remaining till end of run:');
 
-%   YPos = YPos-(4.7*Height+2*YGap);
+%   YPos = YPos-(4.7*editHeight+2*YGap);
   hMessage = uicontrol('Parent',hMainFigure,...             %Message window
       'BackgroundColor',mGray,...
       'ForegroundColor','r',...
@@ -358,26 +365,25 @@ YPos = YPos-(Height+YGap);
       'Style','text');
 
 %%%%%%%%%%%%%%%%% Sound display Windows
-  Width = 0.4;
-  Height = 0.4;
+  windowWidth = 0.4;
+  windowHeight = 0.4;
   YGap = 0.05;
   XPos = 0.075;
   YPos = 0.275;
   hSpectrogram = axes('Parent',gcf,...
      'Units','normalized',...
-     'Position',[XPos YPos Width Height],...
+     'Position',[XPos YPos windowWidth windowHeight],...
      'FontName','Arial',...
      'FontSize',10,...
      'Box','on');
   hTimeseries = axes('Parent',gcf,...
      'Units','normalized',...
-     'Position',[XPos YPos+Height+YGap Width 1-Height-2*YGap-YPos],...
+     'Position',[XPos YPos+windowHeight+YGap windowWidth 1-windowHeight-2*YGap-YPos],...
      'FontName','Arial',...
      'FontSize',10,...
      'Box','on');
 
 
-  Width = 0.2;
   XGap = 0.025;
   YGap = 0.0075;
   XPos = 0.05;
@@ -407,10 +413,16 @@ YPos = YPos-(Height+YGap);
     'Callback',{@mainCallback,'SynTrig'},...
       'Enable','off',...
       'HorizontalAlignment','center',...
-    'Position',[XPos+Width+XGap YPos Width buttonHeight], ...
+    'Position',[XPos+Width+XGap YPos Width*2/3 buttonHeight], ...
       'Style','pushbutton',...
     'String',sprintf('Simulated Trigger (%.2f s)',syncTR/1000), ...
     'Tag','SynTrig');
+  hSyncTR = uicontrol('Parent',hMainFigure, ...
+      'BackgroundColor',[1 1 1],...
+    'Callback',{@mainCallback,'SyncTR'},...
+      'Position',[XPos+Width*5/3+XGap*3/2 YPos Width/3-XGap/2 buttonHeight],...
+      'String',num2str(syncTR/1000),...
+      'Style','edit');
 
   YPos = YPos-(buttonHeight+2*YGap);
   hStartCircuit = uicontrol('Parent',hMainFigure,...         %Start circuit
@@ -506,11 +518,17 @@ YPos = YPos-(Height+YGap);
 
       case('TR')
         TR = 1000*eval(get(handleCaller,'String'));
+        TDTcycle = ceil(minTDTcycle/TR)*TR;
+        minTR = TDTcycle-TR/2;  % the minimum delay between consecutive received scanner pulses (useful to skip scanner pulses in continuous sequences)
+        nStimTRs = round(TDTcycle/stimTR);    %number of stimTRs that fit in a TDT cycle
+        nTRs = round(TDTcycle/TR);    %number of stimTRs that fit in a TDT cycle
         updateRunInfo   %update the run duration according to the new TR value
-        plotSignal(zeros(1,signalSize()));
+        plotSignal(zeros(1,nStimTRs*signalSize()));
 
-      case('minTR')
-        minTR = 1000*eval(get(handleCaller,'String'));
+      case('stimTR')
+        stimTR = 1000*eval(get(handleCaller,'String'));
+        nStimTRs = round(TDTcycle/stimTR);    %number of stimTRs that fit in a TDT cycle
+        updateRunInfo   %update the run duration according to the new stimTR value
         
       case('noiseLevel')
         NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
@@ -525,7 +543,7 @@ YPos = YPos-(Height+YGap);
       case('displaySounds')
         displaySounds=get(handleCaller,'Value'); % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
         if ~displaySounds
-          plotSignal(zeros(1,signalSize()));
+          plotSignal(zeros(1,nStimTRs*signalSize()));
         end
         
       case('headphones')
@@ -552,6 +570,8 @@ YPos = YPos-(Height+YGap);
     %         displayMessage({'Stop Simulated TRIGGER'})
         end
 
+      case('SyncTR')
+        syncTR = 1000*eval(get(handleCaller,'String'));
         
       case('StartCircuit')    
 
@@ -581,7 +601,7 @@ YPos = YPos-(Height+YGap);
             displayMessage({'RP2 circuit loaded and running!'})
           end
           displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB and NNL gain to %.0f !',HB7Gain, NNLsetting)});
-          displayMessage('==> Make sure the red BNC is connected to the HB7 left output');
+          displayMessage('==> Make sure the red BNC is connected to the HB7 left output (for NNL headphones)');
           
           %check that the sampling rate of the circuit is the same as the one set in this program
           % (alternatively, could read the sampling rate from the circuit)
@@ -648,8 +668,9 @@ YPos = YPos-(Height+YGap);
             displayMessage({'==> WARNING: TR not specified!'})
             abort=true;
         end
-        if isempty(minTR)
-            minTR=0;
+        if rem(TR,stimTR)
+            displayMessage({'==> WARNING: TR must be an integer multiple of stimTR!'})
+            abort=true;
         end
         if abort
           return
@@ -664,7 +685,7 @@ YPos = YPos-(Height+YGap);
         %check that there is enough space in the SerSource buffer for
         %signal plus trailing zeroes
         if TDT
-          if signalSize()>= signalBufferMaxSize - signalExtraZeroes % cannot allocate more memory than that set 
+          if nStimTRs*signalSize()>= signalBufferMaxSize - signalExtraZeroes % cannot allocate more memory than that set 
               % at circuit compilation (currently 300000 samples ~= 12.8 seconds)
               displayMessage({'==> ERROR: TR is too long.';'Increase initial SignalBufSize in circuit'}) 
               return
@@ -682,10 +703,11 @@ YPos = YPos-(Height+YGap);
         set(hStopCircuit,'Enable','off')
         set(hInserts,'Enable','off')
         set(hParticipant,'Enable','off')
+        set(hSyncTR,'Enable','off')
         set(hParamsFunction,'Enable','off')
         set(hEpochsPerRun,'Enable','off')
         set(hTR,'Enable','off')
-        set(hMinTR,'Enable','off')
+        set(hStimTR,'Enable','off')
         set(hNLevel,'Enable','off')
         set(hAMfrequency,'Enable','off')
         set(hParams(1:usedAddParams),'Enable','off')
@@ -757,13 +779,14 @@ YPos = YPos-(Height+YGap);
           transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileRight]);
         end
         
-        %write background noise to TDT
-        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
         if TDT
+          %write background noise to TDT
+          fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
           invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
           invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)); %set the noise level
           invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)); %set the noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
+          invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
         end
         
         %write log file header
@@ -808,13 +831,14 @@ YPos = YPos-(Height+YGap);
         set(hParamsFunction,'Enable','on')
         set(hEpochsPerRun,'Enable','on')
         set(hTR,'Enable','on')
-        set(hMinTR,'Enable','on')
+        set(hStimTR,'Enable','on')
         set(hNLevel,'Enable','on')
         set(hAMfrequency,'Enable','on')
         set(hParams(1:usedAddParams),'Enable','on')
         set(hStartRun,'Enable','on')
         set(hStopCircuit,'Enable','on')
         set(hInserts,'Enable','on')
+        set(hSyncTR,'Enable','on')
         mainCallback([],[],'SynTrig',4); %reset Simulated trigger button to off state
         displayMessage({'Proceed by pressing <Start run> ...'});
         
@@ -834,30 +858,34 @@ YPos = YPos-(Height+YGap);
   function lcfOneRun()
 
     % Compute stimulus parameters for this run
-    [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,TR);
-    %add empty stimulus at the end
-    stimulus(end+1).frequency=NaN;
-    stimulus(end).level=NaN;
-    stimulus(end).bandwidth=NaN;
-    stimulus(end).duration = TR;
-    stimulus(end).number=0;
-    stimulus(end).name='No stimulus';
+    [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR);
+    %add at least one empty stimulus at the end (or as many as necessary so that 
+    %the total number of stimuli is a multiple of nStimTRs and the last entire TDT cycle is empty)
+    nCycles = ceil(length(stimulus)/nStimTRs)+1;
+    for iStim = length(stimulus)+1:nCycles*nStimTRs
+      stimulus(iStim).frequency=NaN;
+      stimulus(iStim).level=NaN;
+      stimulus(iStim).bandwidth=NaN;
+      stimulus(iStim).duration = stimTR;
+      stimulus(iStim).number=0;
+      stimulus(iStim).name='No stimulus';
+    end
+    nScans = (nCycles-1)*nTRs+1;
 
-    %synthesize signal for first stimulus/trial
-    signal = makeSignal(stimulus(1),signalSize());
+    %synthesize signal for first stimulus/trials
+    signal = makeSignal(stimulus(1:nStimTRs),signalSize());
 
     if TDT
-      invoke(RP2,'SetTagVal','SignalSize',signalSize()+signalExtraZeroes); %this is when to stop the serSource if a trigger has not been received
-      invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); % this is how long to prevent the next trigger to be received
+      invoke(RP2,'SetTagVal','SignalSize',nStimTRs*signalSize()+signalExtraZeroes); %this is when to stop the serSource if a trigger has not been received
       invoke(RP2,'SetTagVal','NTrials',length(stimulus)+1);     %set this to something larger than the number of dynamic scans
-      invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:signalSize()/2)/maxVoltage*(2^15-1)));   %write first half of first stimulus to buffer
-      invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(zeros(2,signalExtraZeroes)/maxVoltage*(2^15-1)));   %write zeroes at the end of buffer
+      invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:nStimTRs*signalSize()/2)/maxVoltage*(2^15-1)));   %write first half of first stimulus to buffer
+      invoke(RP2,'WriteTagVEX','Signal',nStimTRs*signalSize()/2,'I16',round(zeros(2,signalExtraZeroes)/maxVoltage*(2^15-1)));   %write zeroes at the end of buffer
       invoke(RP2,'SoftTrg',1);                                  %start run
       displayMessage({'Starting noise'});
     end
 
     displayMessage({'Waiting for trigger...'});
-    currentTrial = 0;
+    currentTrigger = 0;
     nextTrigger = 0;
     hClipWarning=[];
     
@@ -869,12 +897,12 @@ YPos = YPos-(Height+YGap);
     end
 
     % wait for RP2 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
-    while nextTrigger<= currentTrial && ~strcmp(lastButtonPressed,'stop run')
+    while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
       pause(0.05) % leave a chance to user to press a button
       if TDT
         nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
       elseif simulatedTriggerToggle==3      % or if there is no TDT running, just check that the simulated trigger is on)
-        nextTrigger=currentTrial+1;
+        nextTrigger=currentTrigger+1;
       end
     end
     timeTrigger = now;  % get a timestamp (note that there is a ~.5sec delay in getting the value from the RP2)
@@ -882,14 +910,16 @@ YPos = YPos-(Height+YGap);
     displayMessage({'Received trigger'});
    
     %Main loop
-    while currentTrial<length(stimulus)-1 && ~strcmp(lastButtonPressed,'stop run')
+    while currentTrigger<nCycles-1 && ~strcmp(lastButtonPressed,'stop run')
         
-      currentTrial=nextTrigger;
-      updatelogFile(stimulus(currentTrial),currentTrial,timeTrigger-timeStart); %print stimulus to log file
+      currentTrigger=nextTrigger;
+      currentTrials = (currentTrigger-1)*nStimTRs+(1:nStimTRs);
+      currentScans = ceil(currentTrials/nStimTRs*nTRs);
+      updatelogFile(stimulus(currentTrials),currentScans,timeTrigger-timeStart); %print stimulus to log file
       %update current condition information
-      updateTrialInfo(currentTrial,length(stimulus)+1,stimulus(currentTrial).number,stimulus(currentTrial).name);
+      updateTrialInfo(currentScans(1),nScans,stimulus(currentTrials(1)).number,stimulus(currentTrials(1)).name);
       
-      if currentTrial>0 
+      if currentTrigger>0 
         if displaySounds  
           [hCursorT, hCursorF] = plotSignal(signal);  %plot signal for next stimulus
         else
@@ -900,7 +930,7 @@ YPos = YPos-(Height+YGap);
       if max(signal)>maxVoltage
         %find which TDT attenuation setting would solve the problem
         newHB7Gain = 3*ceil(20*(log10(max(signal)/maxVoltage))/3) + HB7Gain;
-        hClipWarning = text(TR/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!!'],...
+        hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!!'],...
                                          ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
                        'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
       else
@@ -912,12 +942,12 @@ YPos = YPos-(Height+YGap);
       thisSyncTR=round(syncTR+(rand(1)-0.5)*10); %add random value to sync TR
 %     thisSyncTR=round(syncTR+rand(1)*1000));          
       if TDT %write second half of signal to buffer (trial i) while the first half is playing
-        invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(signal(:,signalSize()/2+1:end)/maxVoltage*(2^15-1)));      
+        invoke(RP2,'WriteTagVEX','Signal',nStimTRs*signalSize()/2,'I16',round(signal(:,nStimTRs*signalSize()/2+1:end)/maxVoltage*(2^15-1)));      
         invoke(RP2,'SetTagVal','SynTR',thisSyncTR/sampleDuration);      %set duration of simulated trigger TR in samples (with a  bit of jitter)    
       end
       
-      %compute signal for next stimulus/trial (i+1)
-      signal = makeSignal(stimulus(currentTrial+1),signalSize());
+      %compute signal for next stimulus/trials (i+1)
+      signal = makeSignal(stimulus(currentTrigger*nStimTRs+(1:nStimTRs)),signalSize());
 
       if TDT %get the sample counter
         bufferCount =  double(invoke(RP2,'GetTagVal','BufIdx'));
@@ -926,7 +956,7 @@ YPos = YPos-(Height+YGap);
         bufferCount = round((elapsedTime(6))*1000/sampleDuration);
       end
       % wait for RP2 to get to middle of buffer 
-      while bufferCount<signalSize()/2 && ~strcmp(lastButtonPressed,'stop run') 
+      while bufferCount<nStimTRs*signalSize()/2 && ~strcmp(lastButtonPressed,'stop run') 
         pause(0.05)                                                           
         % update the cursor position to the estimated elapsed time since the start of the signal
         if ishandle(hCursorT)  
@@ -946,13 +976,13 @@ YPos = YPos-(Height+YGap);
       end
 
       if TDT % write first half of new stimulus to buffer (cond i+1) while second half is being played
-        invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:signalSize()/2)/maxVoltage*(2^15-1)));   
+        invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:nStimTRs*signalSize()/2)/maxVoltage*(2^15-1)));   
       end
  
       % wait for RP2 to receive the next scanner/simulated trigger 
-      while nextTrigger<= currentTrial && ~strcmp(lastButtonPressed,'stop run')
+      while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
         pause(0.05) % leave a chance to user to press a button
-        if currentTrial>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
+        if currentTrigger>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
           elapsedTime = datevec(now-timeTrigger);
           bufferCount = round((elapsedTime(6))*1000/sampleDuration);
           set(hCursorT,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
@@ -962,7 +992,7 @@ YPos = YPos-(Height+YGap);
           nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
         else %or if there is no TDT running
           if any(datevec(now-timeTrigger)>ceil((minTR+1)/thisSyncTR)*thisSyncTR/1000)    %otherwise, see if enough time has passed
-                nextTrigger=currentTrial+1;
+                nextTrigger=currentTrigger+1;
           end
         end
       end                            
@@ -971,12 +1001,12 @@ YPos = YPos-(Height+YGap);
     end
     
     %erase signal visualisation
-    plotSignal(zeros(1,signalSize()));
+    plotSignal(zeros(1,nStimTRs*signalSize()));
     updateTrialInfo([],[],[]);
     if TDT    %stop stimulus presentation 
       invoke(RP2,'SoftTrg',2); %prevents trigger from sending new signal
       invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(zeros(2,signalBufferMaxSize)/maxVoltage*(2^15-1))); %erase all signal in  serial source 
-%       invoke(RP2,'WriteTagVEX','Signal',signalSize()/2,'I16',round(signal(:,signalSize()/2+1:end)/maxVoltage*(2^15-1))); %write second half of last (empty) stimulus to buffer
+%       invoke(RP2,'WriteTagVEX','Signal',nStimTRs*signalSize()/2,'I16',round(signal(:,nStimTRs*signalSize()/2+1:end)/maxVoltage*(2^15-1))); %write second half of last (empty) stimulus to buffer
 %       (this should be enough, but sometimes there's something left form previous runs, not sure why...)
     end
     if strcmp(lastButtonPressed,'stop run')
@@ -993,42 +1023,46 @@ YPos = YPos-(Height+YGap);
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% noise synthesizing functions
   
   % ********** makeSignal **********
-  function signal = makeSignal(stimulus,totalSamples)
-
-    if any(any(diff([size(stimulus.frequency);size(stimulus.bandwidth);size(stimulus.level);size(stimulus.duration)])))
-      error('(makeSignal) Mismatching dimensions in signal parameters')
-    end
-
-    %convert durations to samples
-    samples = round(stimulus.duration/sampleDuration);
-    if any(sum(samples,2)>totalSamples) %desired signal is larger than totalSamples
-      samples(:,end) = samples(:,end) - sum(samples,2) + totalSamples; %reduce the duration of the last stimulus so that it fits
-    end
-    Gate = round(gateDuration/sampleDuration);
-    Gate = Gate + mod(Gate,2); %even number of gate samples 
-
-    signal = zeros(2,totalSamples+Gate);
-    currentSample = 0;
-    for i = 1:size(stimulus.frequency,1)
-      for j = 1:size(stimulus.frequency,2)
-        if ~isnan(stimulus.frequency(i,j)) && ~isnan(stimulus.bandwidth(i,j)) && ~isnan(stimulus.level(i,j))
-          thisSignal = makeNoiseBand(stimulus.frequency(i,j),stimulus.bandwidth(i,j),samples(i,j)+Gate);
-          thisSignal(1,:) = thisSignal(1,:).*10^((stimulus.level(i,j)+calibrationGainLeft)/20);  
-          thisSignal(2,:) = thisSignal(2,:).*10^((stimulus.level(i,j)+calibrationGainRight)/20);  
-          signal(1,currentSample+(1:samples(i,j)+Gate))= signal(1,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(1,:),Gate);
-          signal(2,currentSample+(1:samples(i,j)+Gate))= signal(2,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(2,:),Gate);
-%           signal(1,currentSample+(1:samples(i,j)+Gate))= zeros(size(signal(1,currentSample+(1:samples(i,j)+Gate))));
-        end
-        currentSample = currentSample+samples(i,j);
+  function totalSignal = makeSignal(stimulus,totalSamples)
+    
+    totalSignal = zeros(2,length(stimulus)*totalSamples);
+    for iStim = 1:length(stimulus)
+      if any(any(diff([size(stimulus(iStim).frequency);size(stimulus(iStim).bandwidth);size(stimulus(iStim).level);size(stimulus(iStim).duration)])))
+        error('(makeSignal) Mismatching dimensions in signal parameters')
       end
+
+      %convert durations to samples
+      samples = round(stimulus(iStim).duration/sampleDuration);
+      if any(sum(samples,2)>totalSamples) %desired signal is larger than totalSamples
+        samples(:,end) = samples(:,end) - sum(samples,2) + totalSamples; %reduce the duration of the last stimulus so that it fits
+      end
+      Gate = round(gateDuration/sampleDuration);
+      Gate = Gate + mod(Gate,2); %even number of gate samples 
+
+      signal = zeros(2,totalSamples+Gate);
+      currentSample = 0;
+      for i = 1:size(stimulus(iStim).frequency,1)
+        for j = 1:size(stimulus(iStim).frequency,2)
+          if ~isnan(stimulus(iStim).frequency(i,j)) && ~isnan(stimulus(iStim).bandwidth(i,j)) && ~isnan(stimulus(iStim).level(i,j))
+            thisSignal = makeNoiseBand(stimulus(iStim).frequency(i,j),stimulus(iStim).bandwidth(i,j),samples(i,j)+Gate);
+            thisSignal(1,:) = thisSignal(1,:).*10^((stimulus(iStim).level(i,j)+calibrationGainLeft)/20);  
+            thisSignal(2,:) = thisSignal(2,:).*10^((stimulus(iStim).level(i,j)+calibrationGainRight)/20);  
+            signal(1,currentSample+(1:samples(i,j)+Gate))= signal(1,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(1,:),Gate);
+            signal(2,currentSample+(1:samples(i,j)+Gate))= signal(2,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(2,:),Gate);
+  %           signal(1,currentSample+(1:samples(i,j)+Gate))= zeros(size(signal(1,currentSample+(1:samples(i,j)+Gate))));
+          end
+          currentSample = currentSample+samples(i,j);
+        end
+      end
+      signal = signal(:,Gate/2+(1:totalSamples));
+      signal = lcfGate(signal,Gate);
+
+      % A sinusoid with a peak amplitude of 1 has an RMS amplitude of 1/sqrt(2) = -3dB less than RMS = 1; 
+      % A sinusoid with amplitude 1 in combination with HB7 gain = -27 and NNLGain = 6 creates 65.5 dB SPL -> 
+      % correction factor = 65.5 + 27 - 6 = 86.5 ; for noise: correction factor = 89.5    
+      
+      totalSignal(:,(iStim-1)*totalSamples+(1:totalSamples)) = signal;
     end
-    signal = signal(:,Gate/2+(1:totalSamples));
-    signal = lcfGate(signal,Gate);
-
-    % A sinusoid with a peak amplitude of 1 has an RMS amplitude of 1/sqrt(2) = -3dB less than RMS = 1; 
-    % A sinusoid with amplitude 1 in combination with HB7 gain = -27 and NNLGain = 6 creates 65.5 dB SPL -> 
-    % correction factor = 65.5 + 27 - 6 = 86.5 ; for noise: correction factor = 89.5       
-
   end
 
   % ***** lcfGate *****
@@ -1192,7 +1226,7 @@ YPos = YPos-(Height+YGap);
 
   % ***** signalSize *****
   function signalSize = signalSize()
-    signalSize = round(TR/sampleDuration);
+    signalSize = round(stimTR/sampleDuration);
     signalSize = signalSize+mod(signalSize,2); %has to be an even number for double buffering method
   end
 
@@ -1206,13 +1240,13 @@ YPos = YPos-(Height+YGap);
     hold(hTimeseries,'off');
     plot(hTimeseries,time,signal,'k')
     hold(hTimeseries,'on');
-    plot(hTimeseries,[0 TR/1000],[maxVoltage maxVoltage],'r--');
-    plot(hTimeseries,[0 TR/1000],-1*[maxVoltage maxVoltage],'r--');
+    plot(hTimeseries,[0 TDTcycle/1000],[maxVoltage maxVoltage],'r--');
+    plot(hTimeseries,[0 TDTcycle/1000],-1*[maxVoltage maxVoltage],'r--');
     hCursorT = plot(hTimeseries,[0 0],get(hTimeseries,'Ylim'),'r');
-    set(hTimeseries,'XLim',[0 TR/1000])
+    set(hTimeseries,'XLim',[0 TDTcycle/1000])
     set(get(hTimeseries,'XLabel'),'String','Time(s)','FontName','Arial','FontSize',10)
     set(get(hTimeseries,'YLabel'),'String','Amplitude','FontName','Arial','FontSize',10)
-    set(hTimeseries,'XLim',[0 TR/1000]);
+    set(hTimeseries,'XLim',[0 TDTcycle/1000]);
     title(hTimeseries,'Cursor position is approximate !');
 
     [specg,frq,t] = spectrogram(signal,round(100/sampleDuration),round(80/sampleDuration),round(50/sampleDuration),1000/sampleDuration);
@@ -1225,7 +1259,7 @@ YPos = YPos-(Height+YGap);
     axis(hSpectrogram,'tight'); 
     colormap(hSpectrogram,jet); 
     hCursorF = plot(hSpectrogram,[0 0],get(hSpectrogram,'Ylim'),'k');
-    set(hSpectrogram,'XLim',[0 TR/1000]);
+    set(hSpectrogram,'XLim',[0 TDTcycle/1000]);
     set(get(hSpectrogram,'XLabel'),'String','Time (s)','FontName','Arial','FontSize',10)
     set(get(hSpectrogram,'YLabel'),'String','Frequency (Hz)','FontName','Arial','FontSize',10)
 
@@ -1241,21 +1275,22 @@ YPos = YPos-(Height+YGap);
   function updateRunInfo
 
     if ~isempty(params) && ~isempty(nRepeatsPerRun)
-      [dummy,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,TR); %get a set of stimuli for the current parameter values
+      [~,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR); %get a set of stimuli for the current parameter values
       strg = get(hNScans,'String'); %display the number of dynamic scans
       % compute and display the run length in TR and minutes (I add one because the there is always an extra TR with no stimulus at the end)
-      set(hNScans,'string',sprintf('%s %g (%s)',strg(1:strfind(strg,':')),length(stimulus)+1,scansToMinutes(length(stimulus)+1,TR)));
+      totalTRs = ceil(length(stimulus)*stimTR/TR)+1;
+      set(hNScans,'string',sprintf('%s %g (%s)',strg(1:strfind(strg,':')),totalTRs,scansToMinutes(totalTRs,TR)));
     end
   end
 
   % ***** updateTrialInfo *****
-  function updateTrialInfo(trialNumber,totalTrials,conditionNumber,conditionName)
+  function updateTrialInfo(scanNumber,totalScans,conditionNumber,conditionName)
 
-    strg = get(hCurrentTrial,'String'); Idx = strfind(strg,':');  
-    if ~isempty(trialNumber)
-      set(hCurrentTrial,'String',[strg(1:Idx) sprintf(' %d',trialNumber)]);
+    strg = get(hcurrentTrigger,'String'); Idx = strfind(strg,':');  
+    if ~isempty(scanNumber)
+      set(hcurrentTrigger,'String',[strg(1:Idx) sprintf(' %d',scanNumber)]);
     else
-      set(hCurrentTrial,'String',strg(1:Idx));
+      set(hcurrentTrigger,'String',strg(1:Idx));
     end  
 
     strg = get(hCurrentCondition,'String'); Idx = strfind(strg,':');  
@@ -1266,8 +1301,8 @@ YPos = YPos-(Height+YGap);
     end
 
     strg = get(hRemainingTime,'String'); Idx = strfind(strg,':');     
-    if ~isempty(trialNumber)
-      set(hRemainingTime,'String',[strg(1:Idx) scansToMinutes(totalTrials-(trialNumber-1),TR)]); 
+    if ~isempty(scanNumber)
+      set(hRemainingTime,'String',[strg(1:Idx) scansToMinutes(totalScans-(scanNumber-1),TR)]); 
     else
       set(hRemainingTime,'String',strg(1:Idx)); 
     end
@@ -1298,17 +1333,19 @@ YPos = YPos-(Height+YGap);
   end
 
   % ***** updatelogFile *****
-  function updatelogFile(stimulus,scan,timestamp)
-    dateString=datestr(timestamp,'MM:SS.FFF');
-    totalDuration=0;
-    for i=1:size(stimulus.frequency,2)
-      fprintf(logFile,'%d\t%d\t%2.3f\t\t%2.2f\t\t%2.3f\t\t%d\t\t"%s"\t%s\n', ...
-        scan,stimulus.number,stimulus.frequency(i),stimulus.level(i),stimulus.bandwidth(i),stimulus.duration(i),stimulus.name,dateString);
-      totalDuration = totalDuration + stimulus.duration(i);
-    end
-    if totalDuration<TR %add line for silent end of stimulus train
-      fprintf(logFile,'%d\t%d\t%2.3f\t\t%2.2f\t\t%2.3f\t\t%d\t\t"%s"\t%s\n', ...
-        scan,stimulus.number,NaN,NaN,NaN,TR-totalDuration,stimulus.name,dateString);
+  function updatelogFile(stimulus,scans,timestamp)
+    for iStim = 1:length(stimulus)
+      dateString=datestr(datenum(datevec(timestamp)+[0 0 0 0 0 (iStim-1)*stimTR/1000]),'MM:SS.FFF');
+      totalDuration=0;
+      for i=1:size(stimulus(iStim).frequency,2)
+        fprintf(logFile,'%d\t%d\t%2.3f\t\t%2.2f\t\t%2.3f\t\t%d\t\t"%s"\t%s\n', ...
+          scans(iStim),stimulus(iStim).number,stimulus(iStim).frequency(i),stimulus(iStim).level(i),stimulus(iStim).bandwidth(i),stimulus(iStim).duration(i),stimulus(iStim).name,dateString);
+        totalDuration = totalDuration + stimulus(iStim).duration(i);
+      end
+      if totalDuration<stimTR %add line for silent end of stimulus train
+        fprintf(logFile,'%d\t%d\t%2.3f\t\t%2.2f\t\t%2.3f\t\t%d\t\t"%s"\t%s\n', ...
+          scans(iStim),stimulus(iStim).number,NaN,NaN,NaN,stimTR-totalDuration,stimulus(iStim).name,dateString);
+      end
     end
   end
 
