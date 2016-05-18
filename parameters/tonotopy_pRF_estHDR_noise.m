@@ -22,7 +22,7 @@ if fieldIsNotDefined(params,'nBlocks')
     params.nBlocks = 4;  % number of blocks in a group
 end
 if fieldIsNotDefined(params,'nBaseline')
-    params.nBaseline = 1;  % multiple of number of noise groups (nCondtions = (nBlocks-1 *nRepeats)) of silent baseline groups
+    params.nBaseline = 0;  % multiple of number of noise groups (nCondtions = (nBlocks-1 *nRepeats)) of silent baseline groups
 end
 if fieldIsNotDefined(params,'nMorseTrain')
     params.nMorseTrain = 8; % number of beeps in train
@@ -52,7 +52,7 @@ if fieldIsNotDefined(params,'level')
     params.level = 70;
 end
 if fieldIsNotDefined(params,'blockDur')
-%     params.blockDur = TR * 1000;
+    %     params.blockDur = TR * 1000;
     params.blockDur = 2000; % morse train duration - ms
 end
 if fieldIsNotDefined(params,'AquistionType')
@@ -67,16 +67,21 @@ end
 allduration = [repmat([params.blockOnA],1,params.nblockOnA) repmat([params.blockOnB],1,params.nblockOnB)];
 check = params.nMorseTrain - (params.nblockOnA + params.nblockOnB);
 if check<0
-  error('There are too many morse trains');
+    error('There are too many morse trains');
 end
 check = params.blockDur - ((params.blockOnA*params.nblockOnA)+(params.blockOnB*params.nblockOnB));
 if check<0
-  error('The stimulus block is longerthan the TR');
+    error('The stimulus block is longerthan the TR');
 end
 
 % create noise morse code trains
 c=0;
-nCons = params.nBlocks * params.nRepeats;
+% if aquistion continuous
+if params.AquistionType == 1
+    nCons = params.nBlocks * params.nRepeats;
+else
+    nCons = (params.nBlocks-1) * params.nRepeats;
+end
 
 for i=1:nCons
     c=c+1;
@@ -98,22 +103,31 @@ silence.level = NaN;
 silence.name = sprintf('Silence');
 
 % order sequence
- pad = repmat(silence,params.nBlocks-2,length(stimulus));
- stimulus = [stimulus; pad];
- 
- for i = 1:size(stimulus,2)
-     ix = randperm(size(stimulus,1));
- stimulus(:,i) = stimulus(ix(1:3),i);
- end
- buffer = repmat(silence,1,size(stimulus,2));
- stimulus = [buffer; stimulus];
- 
- baseline = repmat(silence,params.nBlocks,round(length(stimulus)*params.nBaseline));% number of baseline groups to noise groups
- stimulus = [stimulus baseline];
- ix = randperm(size(stimulus,2));
- stimulus = stimulus(:,ix);
- 
- 
+% if aquistion continuous
+if params.AquistionType == 1
+    pad = repmat(silence,params.nBlocks-1,length(stimulus));
+else
+    pad = repmat(silence,params.nBlocks-2,length(stimulus));
+end
+stimulus = [stimulus; pad];
+
+for i = 1:size(stimulus,2)
+    ix = randperm(size(stimulus,1));
+    stimulus(:,i) = stimulus(ix(1:size(stimulus,1)),i);
+end
+
+% if aquistion sparse
+if params.AquistionType == 0
+    buffer = repmat(silence,1,size(stimulus,2));
+    stimulus = [buffer; stimulus];
+end
+
+baseline = repmat(silence,params.nBlocks,round(length(stimulus)*params.nBaseline));% number of baseline groups to noise groups
+stimulus = [stimulus baseline];
+ix = randperm(size(stimulus,2));
+stimulus = stimulus(:,ix);
+
+
 % if aquistion continuous
 if params.AquistionType == 1
     ix = randperm(numel(stimulus));
