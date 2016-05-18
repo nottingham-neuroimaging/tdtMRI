@@ -22,7 +22,7 @@ if fieldIsNotDefined(params,'highFrequency')
     params.highFrequency = 8;
 end
 if fieldIsNotDefined(params,'nFrequencies')
-    params.nFrequencies = 150; % must be multiple of nNull - 1
+    params.nFrequencies = 150; % must be multiple of nNull-1
 end
 if fieldIsNotDefined(params,'nRepeats')
     params.nRepeats = 2;
@@ -31,7 +31,7 @@ if fieldIsNotDefined(params,'nNull')
     params.nNull = 4;  %ratio of null trials - 1/nNull
 end
 if fieldIsNotDefined(params,'nBaseline')
-    params.nBaseline = 6;  %ratio of base line blocks - 1/nNull
+    params.nBaseline = 6;  %ratio of base line blocks - 1/nBaseline
 end
 if fieldIsNotDefined(params,'nMorseTrain')
     params.nMorseTrain = 8; % number of beeps in train
@@ -54,13 +54,11 @@ end
 if fieldIsNotDefined(params,'bandwidthERB')
     params.bandwidthERB = 1;
 end
-if fieldIsNotDefined(params,'onset')
-    params.onset = 2500;
-end
 if fieldIsNotDefined(params,'level')
     params.level = 70;
 end
 if fieldIsNotDefined(params,'blockDur')
+    %     params.blockDur = TR * 1000;
     params.blockDur = 2000; % morse train duration - ms
 end
 if fieldIsNotDefined(params,'AquistionType')
@@ -117,12 +115,6 @@ for i=1:length(allFrequencies)
     stimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
 end
 
-% totCons = params.nFrequencies * params.nRepeats;
-% totConsNull = totCons/params.nNull;
-% totConsSilent = (totCons+totConsNull)/params.nBaseline;
-% 
-% totalConsTot = totCons + totConsNull + totConsSilent;
-
 % order sequence
  stimulus = reshape(stimulus,params.nNull-1,length(stimulus)/(params.nNull-1));
  buffer = repmat(silence,1,size(stimulus,2));
@@ -132,6 +124,7 @@ end
  stimulus = [stimulus silence];
  ix = randperm(size(stimulus,2));
  stimulus = stimulus(:,ix);
+ 
 % if aquistion continuous
 if params.AquistionType == 1
     ix = randperm(numel(stimulus));

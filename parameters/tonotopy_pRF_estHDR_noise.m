@@ -98,7 +98,6 @@ silence.level = NaN;
 silence.name = sprintf('Silence');
 
 % order sequence
-%  stimulus = reshape(stimulus,params.nNull-1,length(stimulus)/(params.nNull-1));
  pad = repmat(silence,params.nBlocks-2,length(stimulus));
  stimulus = [stimulus; pad];
  
