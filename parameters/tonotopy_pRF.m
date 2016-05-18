@@ -1,14 +1,5 @@
 function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,TR)
 
-% TO DO
-% change params based on TR
-%    nConsPerScan
-% make nFrequencies with random CF in between lowFreq and highFreq
-% look at random number generation
-% ask Julien how to make it morse code
-% how many frequencies can we present
-% how many silent conditions do we need
-
 % stimulus = struct array with fields:
 %frequency (kHz)
 %bandwidth
@@ -17,6 +8,7 @@ function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,TR)
 %name
 %number
 
+% TR = stimTR
 
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
@@ -30,7 +22,7 @@ if fieldIsNotDefined(params,'highFrequency')
     params.highFrequency = 8;
 end
 if fieldIsNotDefined(params,'nFrequencies')
-    params.nFrequencies = 150;
+    params.nFrequencies = 150; % must be multiple of nNull - 1
 end
 if fieldIsNotDefined(params,'nRepeats')
     params.nRepeats = 2;
@@ -42,13 +34,19 @@ if fieldIsNotDefined(params,'nBaseline')
     params.nBaseline = 6;  %ratio of base line blocks - 1/nNull
 end
 if fieldIsNotDefined(params,'nMorseTrain')
-    params.nMorseTrain = 7; % number of beeps in train
+    params.nMorseTrain = 8; % number of beeps in train
 end
 if fieldIsNotDefined(params,'blockOnA')
     params.blockOnA = 50;
 end
-if fieldIsNotDefined(params,'blockOnb')
-    params.blockOnb = 200;
+if fieldIsNotDefined(params,'blockOnB')
+    params.blockOnB = 200;
+end
+if fieldIsNotDefined(params,'nblockOnA')
+    params.nblockOnA = 3;
+end
+if fieldIsNotDefined(params,'nblockOnB')
+    params.nblockOnB = 5;
 end
 if fieldIsNotDefined(params,'intStimGap')
     params.intStimGap = 50;
@@ -66,7 +64,7 @@ if fieldIsNotDefined(params,'blockDur')
     params.blockDur = 2000; % morse train duration - ms
 end
 if fieldIsNotDefined(params,'AquistionType')
-    params.AquistionType = 1; % 1 = TR = block duration ie continuous
+    params.AquistionType = 0; % 1 = TR = block duration ie continuous
     % 0 = TR > block duration ie sparse
 end
 
@@ -83,98 +81,75 @@ highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/
 allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
 allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
 
-allduration = [50 50 50 200 200 200 200];
-% nStimsInTrain = floor((TR-params.onset)/params.soa);
+allduration = [repmat([params.blockOnA],1,params.nblockOnA) repmat([params.blockOnB],1,params.nblockOnB)];
+check = params.nMorseTrain - (params.nblockOnA + params.nblockOnB);
+if check>0
+    error('There are too many morse trains');
+end
+check = params.blockDur - ((params.blockOnA*params.nblockOnA)+(params.blockOnB*params.nblockOnB));
+if check<0
+    error('The stimulus block is longerthan the TR');
+end
 
-
-stimulus.frequency=[];
-stimulus.duration=[];
-stimulus.level=[];
-stimulus.bandwidth=[];
-stimulus.name=[];
-stimulus.number=[];
-% create frequency moorse code trains
+% create frequency morse code trains
 c=0;
+% create silent block
+silence.frequency = NaN;
+silence.duration =  params.blockDur; % modify to be length of frequency block automatically
+silence.bandwidth  = NaN;
+silence.level = NaN;
+silence.name = sprintf('Silence');
+
 for i=1:length(allFrequencies)
     c=c+1;
-    freqStimulus(c).frequency =  [repmat([allFrequencies(i) NaN],1,params.nMorseTrain) NaN];
+    stimulus(c).frequency =  [repmat([allFrequencies(i) NaN],1,params.nMorseTrain)];
     ix = randperm(params.nMorseTrain);
     dur = allduration(ix);
+    x = 0;
     for ii = 1:length(allduration)
-        freqStimulus(c).duration =  [repmat([dur(ii) params.intStimGap],1,params.nMorseTrain) NaN];
+        x = x+1;
+        stimulus(c).duration(x) =  dur(ii);
+        stimulus(c).duration(x+1) = params.intStimGap;
+        x = x+1;
     end
-    freqStimulus(c).bandwidth  = [repmat([allBandwidths(i) NaN],1,params.nMorseTrain) NaN];
-    freqStimulus(c).level = params.level;
-    freqStimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
-end
-% create silent block
-silenceStimulus.frequency = NaN;
-silenceStimulus.duration =  params.blockDur; % modify to be length of frequency block automatically
-silenceStimulus.bandwidth  = NaN;
-silenceStimulus.level = NaN;
-silenceStimulus.name = sprintf('Silence');
-
-% create presentation groups
-nBlocks = length(allFrequencies)/params.nNull;
-x = 0;
-for i = 1:nBlocks
-    x=x+1;
-    % silience
-    blockStimulus(x) = silenceStimulus;
-    blockStimulus(x+1) = freqStimulus(x);
-    blockStimulus(x+2) = freqStimulus(x+1);
-    blockStimulus(x+3) = freqStimulus(x+2);
-    x = x+nBlocks;
+    stimulus(c).bandwidth  = [repmat([allBandwidths(i) NaN],1,params.nMorseTrain)];
+    stimulus(c).level = params.level;
+    stimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
 end
 
-% if aquistion continuous randomise where silience is
-if aquistionType == 1
-    ix = randperm(length(blockStimulus));
-    blockStimulus = blockStimulus(ix);
-end
+% totCons = params.nFrequencies * params.nRepeats;
+% totConsNull = totCons/params.nNull;
+% totConsSilent = (totCons+totConsNull)/params.nBaseline;
+% 
+% totalConsTot = totCons + totConsNull + totConsSilent;
 
-nGroups= length(allFrequencies)/params.nBaseline;
-x = 0;
-for i = 1:nGroups
-    x=x+1;
-    % randomise y to move silent group
-    y = 0:params.nBaseline;
-    ix = randperm(params.nBaseline);
-    y = y(ix);
-    for ii = 0:params.nBaseline;
-    % use if to select silent
-    z = y(ii);
-    if z == 1
-        stimulus(x+z) = silenceStimulus;
-        stimulus(x+z+1) = silenceStimulus;
-        stimulus(x+z+2) = silenceStimulus;
-        stimulus(x+z+3) = silenceStimulus;
-    else
-    stimulus(x+z) = blockStimulus(x+z);
-    stimulus(x+z+1) = blockStimulus(x+z+1);
-    stimulus(x+z+2) = blockStimulus(x+z+2);
-    stimulus(x+z+3) = blockStimulus(x+z+3);
-    end
-    end
-    x = x+nGroups;
-end
+% order sequence
+ stimulus = reshape(stimulus,params.nNull-1,length(stimulus)/(params.nNull-1));
+ buffer = repmat(silence,1,size(stimulus,2));
+ stimulus = [buffer; stimulus];
+ silence = repmat(silence,params.nNull,round(length(stimulus)/params.nBaseline));% 1 in 6 groups silence
 
+ stimulus = [stimulus silence];
+ ix = randperm(size(stimulus,2));
+ stimulus = stimulus(:,ix);
 % if aquistion continuous
-if aquistionType == 1
-    ix = randperm(length(stimulus));
+if params.AquistionType == 1
+    ix = randperm(numel(stimulus));
+    stimulus = stimulus(ix);
+else
+    ix = 1:numel(stimulus);
     stimulus = stimulus(ix);
 end
 
-for i = 1:length(stimulus)
+for i = 1:numel(stimulus)
     stimulus(i).number = i;
 end
 
-runTime = length(stimulus) * params.blockDur/60;
+runTime = numel(stimulus) * params.blockDur/1000;
 
 end
 
-
-
+% local functions
 function out = isNotDefined(name)
 
 out = evalin('caller',['~exist(''' name ''',''var'')|| isempty(''' name ''')']);
