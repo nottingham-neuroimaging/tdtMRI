@@ -1,4 +1,4 @@
-function [params,stimulus] = adaptationTrains(params,nRepeatsPerRun,TR)
+function [params,stimulus] = adaptationTrains(params,nRepeatsPerRun,stimTR,TR)
 
 % stimulus = struct array with fields:    
     %frequency (kHz)
@@ -49,7 +49,7 @@ end
 %---------------- enumerate all different conditions
 
 pairDuration = 2*(params.duration+params.gap);
-numberPairs = floor((TR-params.isi)/pairDuration);
+numberPairs = floor((stimTR-params.isi)/pairDuration);
 
 if params.oneSided
   allFrequencies = params.centerFrequency*2.^((-params.nSideFrequencies:0)*.5);

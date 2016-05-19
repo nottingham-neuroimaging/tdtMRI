@@ -1,4 +1,4 @@
-function [params,stimulus] = pureTone(params,nRepeatsPerRun,TR)
+function [params,stimulus] = pureTone(params,nRepeatsPerRun,stimTR,TR)
 
 % stimulus = struct array with fields:    
     %frequency (kHz)
@@ -41,14 +41,14 @@ end
 stimulus(1).frequency=[NaN params.frequency];
 stimulus(1).bandwidth = [NaN params.bandwidth];
 stimulus(1).level=[NaN params.level];
-stimulus(1).duration= [params.onset TR-params.onset];
+stimulus(1).duration= [params.onset stimTR-params.onset];
 stimulus(1).name = 'on';
 stimulus(1).number = 1;
 
 stimulus(2).frequency=NaN;
 stimulus(2).bandwidth = NaN;
 stimulus(2).level=params.level;
-stimulus(2).duration=TR;  
+stimulus(2).duration=stimTR;  
 stimulus(2).name = 'off';
 stimulus(2).number = 2;
 

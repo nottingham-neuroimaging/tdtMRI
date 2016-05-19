@@ -1,4 +1,4 @@
-function [params,stimulus] = adaptationTrainsFilterBW(params,nRepeatsPerRun,TR)
+function [params,stimulus] = adaptationTrainsFilterBW(params,nRepeatsPerRun,stimTR,TR)
 
 % stimulus = struct array with fields:    
     %frequency (kHz)
@@ -101,7 +101,7 @@ allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
 allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
 
 
-nStimsInTrain = floor((TR-params.onset)/params.soa);
+nStimsInTrain = floor((stimTR-params.onset)/params.soa);
 
 c=0;
 stimulus.frequency=[];
@@ -160,7 +160,7 @@ for i=1:params.nNull
   stimulus(c).name = 'No stimulus';
   stimulus(c).level = NaN;
   stimulus(c).bandwidth = NaN;
-  stimulus(c).duration = TR;
+  stimulus(c).duration = stimTR;
   stimulus(c).number = cNull;
   usedForAdaptation(c)= 0;
 end

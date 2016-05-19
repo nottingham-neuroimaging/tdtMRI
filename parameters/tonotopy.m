@@ -1,4 +1,4 @@
-function [params,stimulus] = tonotopy(params,NEpochsPerRun,TR)
+function [params,stimulus] = tonotopy(params,NEpochsPerRun,stimTR,TR)
 
 % stimulus = struct array with fields:    
     %frequency (kHz)
@@ -53,13 +53,13 @@ for i=1:params.nFrequencies+1
     stimulus(i).name = 'No stimulus';
     stimulus(i).bandwidth = NaN;
     stimulus(i).frequency = NaN;
-    stimulus(i).duration = TR;
+    stimulus(i).duration = stimTR;
     stimulus(i).level = NaN;
   else
     stimulus(i).name = sprintf('%dHz',round(allFrequencies(i)*1000));
     stimulus(i).bandwidth = [NaN allBandwidths(i)];
     stimulus(i).frequency = [NaN allFrequencies(i)];
-    stimulus(i).duration = [params.onset TR-params.onset];
+    stimulus(i).duration = [params.onset stimTR-params.onset];
     stimulus(i).level = [NaN params.level];
   end
   stimulus(i).number = i;

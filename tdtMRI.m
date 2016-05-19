@@ -858,7 +858,7 @@ YPos = YPos-(editHeight+YGap);
   function lcfOneRun()
 
     % Compute stimulus parameters for this run
-    [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR);
+    [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR);
     %add at least one empty stimulus at the end (or as many as necessary so that 
     %the total number of stimuli is a multiple of nStimTRs and the last entire TDT cycle is empty)
     nCycles = ceil(length(stimulus)/nStimTRs)+1;
@@ -1275,7 +1275,7 @@ YPos = YPos-(editHeight+YGap);
   function updateRunInfo
 
     if ~isempty(params) && ~isempty(nRepeatsPerRun)
-      [~,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR); %get a set of stimuli for the current parameter values
+      [~,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR); %get a set of stimuli for the current parameter values
       strg = get(hNScans,'String'); %display the number of dynamic scans
       % compute and display the run length in TR and minutes (I add one because the there is always an extra TR with no stimulus at the end)
       totalTRs = ceil(length(stimulus)*stimTR/TR)+1;

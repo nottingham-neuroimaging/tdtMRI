@@ -1,4 +1,4 @@
-function [params,stimulus] = tonotopyAdaptBlockSpecificProbe(params,nRepeatsPerRun,TR)
+function [params,stimulus] = tonotopyAdaptBlockSpecificProbe(params,nRepeatsPerRun,stimTR,TR)
 
 % stimulus = struct array with fields:    
     %frequency
@@ -102,8 +102,8 @@ else
 end
 
 
-OnsB=TR-(HemoDelay+HWindow);
-OnsE=TR-(HemoDelay-HWindow);                            
+OnsB=stimTR-(HemoDelay+HWindow);
+OnsE=stimTR-(HemoDelay-HWindow);                            
 
 onsets1 = OnsB + (OnsE-OnsB).*rand(length(MRITrig),1); %keep onsets for adapter / adapter+probe the same
 onsets=[]; %start with Nan
