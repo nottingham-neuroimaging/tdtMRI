@@ -1,4 +1,4 @@
-function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,TR)
+function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,StimTR,TR)
 
 % stimulus = struct array with fields:
 %frequency (kHz)
@@ -8,12 +8,17 @@ function [params,stimulus] = tonotopy_pRF(params,nRepeatsPerRun,TR)
 %name
 %number
 
-% TR = stimTR
-
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
 if isNotDefined('params')
     params = struct;
+end
+if fieldIsNotDefined(params,'AquistionType')
+    params.AquistionType = 0; % 1 = TR = block duration ie continuous
+    % 0 = TR > block duration ie sparse
+end
+if fieldIsNotDefined(params,'level')
+    params.level = 75;
 end
 if fieldIsNotDefined(params,'lowFrequency')
     params.lowFrequency = .1;
@@ -22,13 +27,17 @@ if fieldIsNotDefined(params,'highFrequency')
     params.highFrequency = 8;
 end
 if fieldIsNotDefined(params,'nFrequencies')
-    params.nFrequencies = 150; % must be multiple of nNull-1
+    params.nFrequencies = 150; % must be multiple of nBlocks-1 for sparse - 150
+                               % must be multiple of nBlocks for continuous - 200
 end
 if fieldIsNotDefined(params,'nRepeats')
-    params.nRepeats = 2;
+    params.nRepeats = 1; % use nRepeatsPerRun instead
 end
-if fieldIsNotDefined(params,'nNull')
-    params.nNull = 4;  %ratio of null trials - 1/nNull
+if fieldIsNotDefined(params,'nBaseline')
+    params.nBaseline = 6;  %ratio of base line blocks - 1/nBaseline
+end
+if fieldIsNotDefined(params,'nBlocks')
+    params.nBlocks = 4;  %ratio of null trials - 1/nBlocks number of blocks per group
 end
 if fieldIsNotDefined(params,'nBaseline')
     params.nBaseline = 6;  %ratio of base line blocks - 1/nBaseline
@@ -54,32 +63,14 @@ end
 if fieldIsNotDefined(params,'bandwidthERB')
     params.bandwidthERB = 1;
 end
-if fieldIsNotDefined(params,'level')
-    params.level = 70;
-end
+
 if fieldIsNotDefined(params,'blockDur')
-    %     params.blockDur = TR * 1000;
+    %     params.blockDur = StimTR * 1000;
     params.blockDur = 2000; % morse train duration - ms
 end
-if fieldIsNotDefined(params,'AquistionType')
-    params.AquistionType = 0; % 1 = TR = block duration ie continuous
-    % 0 = TR > block duration ie sparse
-end
-
 if nargout==1
     return;
 end
-
-allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
-allFrequencies = repmat(allFrequencies,1,params.nRepeats);
-ix = randperm(length(allFrequencies));
-allFrequencies = allFrequencies(ix);
-lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
-highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/2);
-allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
-allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
-
-allduration = [repmat([params.blockOnA],1,params.nblockOnA) repmat([params.blockOnB],1,params.nblockOnB)];
 check = params.nMorseTrain - (params.nblockOnA + params.nblockOnB);
 if check>0
     error('There are too many morse trains');
@@ -89,15 +80,18 @@ if check<0
     error('The stimulus block is longerthan the TR');
 end
 
-% create frequency morse code trains
-c=0;
-% create silent block
-silence.frequency = NaN;
-silence.duration =  params.blockDur; % modify to be length of frequency block automatically
-silence.bandwidth  = NaN;
-silence.level = NaN;
-silence.name = sprintf('Silence');
+allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
+lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
+highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/2);
+allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
+allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
 
+allduration = [repmat([params.blockOnA],1,params.nblockOnA) repmat([params.blockOnB],1,params.nblockOnB)];
+
+
+c=0;
+
+% create frequency morse code trains
 for i=1:length(allFrequencies)
     c=c+1;
     stimulus(c).frequency =  [repmat([allFrequencies(i) NaN],1,params.nMorseTrain)];
@@ -111,32 +105,57 @@ for i=1:length(allFrequencies)
         x = x+1;
     end
     stimulus(c).bandwidth  = [repmat([allBandwidths(i) NaN],1,params.nMorseTrain)];
-    stimulus(c).level = params.level;
+    stimulus(c).level = [repmat([params.level NaN],1,params.nMorseTrain)];
     stimulus(c).name = sprintf('Tone %dHz',round(allFrequencies(i)*1000));
+    stimulus(c).number = c;
 end
+stimulus = repmat(stimulus,1,params.nRepeats);
+ix = randperm(length(stimulus));
+stimulus = stimulus(ix);
+
+% create silent block
+silence.frequency = NaN;
+silence.duration =  params.blockDur; % modify to be length of frequency block automatically
+silence.bandwidth  = NaN;
+silence.level = NaN;
+silence.name = sprintf('Silence');
+silence.number = length(allFrequencies)+1;
 
 % order sequence
- stimulus = reshape(stimulus,params.nNull-1,length(stimulus)/(params.nNull-1));
- buffer = repmat(silence,1,size(stimulus,2));
- stimulus = [buffer; stimulus];
- silence = repmat(silence,params.nNull,round(length(stimulus)/params.nBaseline));% 1 in 6 groups silence
-
- stimulus = [stimulus silence];
- ix = randperm(size(stimulus,2));
- stimulus = stimulus(:,ix);
- 
-% if aquistion continuous
-if params.AquistionType == 1
-    ix = randperm(numel(stimulus));
-    stimulus = stimulus(ix);
+if  params.AquistionType == 0
+stimulus = reshape(stimulus,params.nBlocks-1,length(stimulus)/(params.nBlocks-1));
+buffer = repmat(silence,1,size(stimulus,2));
+stimulus = [buffer; stimulus];
+nfGroup = (params.nFrequencies * params.nRepeats)/(params.nBlocks-1);
 else
-    ix = 1:numel(stimulus);
-    stimulus = stimulus(ix);
+stimulus = reshape(stimulus,params.nBlocks,length(stimulus)/(params.nBlocks));
+nfGroup = (params.nFrequencies * params.nRepeats)/(params.nBlocks);
 end
 
-for i = 1:numel(stimulus)
-    stimulus(i).number = i;
-end
+% randomise within group for continuous here
+% if  params.AquistionType == 1
+%     for i = 1:size(stimulus,2)
+%         ix = randperm(size(stimulus,1));
+%         stimulus(:,i) = stimulus(ix,i);
+%     end
+% end
+
+tGroups = (100*nfGroup) / (((params.nBaseline-1)/params.nBaseline)*100);
+nSilenceGroups = round(tGroups - nfGroup);
+silence = repmat(silence,params.nBlocks,nSilenceGroups);
+% 
+% stimulus = [stimulus(:,1:(size(stimulus,2))/2) ; stimulus(:,(size(stimulus,2)/2)+1:end)];
+% silence = [silence(:,1:(size(silence,2))/2) ; silence(:,(size(silence,2)/2)+1:end)];
+
+stimulus = [stimulus silence];
+ix = randperm(size(stimulus,2));
+stimulus = stimulus(:,ix);
+
+stimulus = stimulus(:);
+
+PACerb = 17; % TW of PAC voxels in ERB
+erbDif = mean(diff(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies)));
+voxelResponseRatio = (PACerb /erbDif)*params.nRepeats/((params.nFrequencies * params.nRepeats) + (nSilenceGroups * params.nBlocks));
 
 runTime = numel(stimulus) * params.blockDur/1000;
 
