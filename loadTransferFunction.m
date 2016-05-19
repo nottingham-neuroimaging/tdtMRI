@@ -12,3 +12,6 @@ tf.fft = conv(tf.fft,ones(1,20)/20,'same');
 %centre on 1kHz
 [~,f1kHz] = min(abs(tf.frequencies-1));
 tf.fft = tf.fft - tf.fft(f1kHz);
+%cap at 8 kHz
+maxHighFrq = 8;
+tf.fft(tf.frequencies>maxHighFrq) = tf.fft(find(tf.frequencies>maxHighFrq,1,'first'));
