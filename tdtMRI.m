@@ -101,9 +101,9 @@ function tdtMRI
   end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 7500;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
-  stimTR = 2500;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
-  minTDTcycle = 5000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
+  TR = 8000;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
+  stimTR = 2000;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
+  minTDTcycle = 7000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
                       % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
                       % before receiving the next one
   TDTcycle = ceil(minTDTcycle/TR)*TR;  %the approximate time of a full cycle of the main program loop
@@ -130,8 +130,8 @@ function tdtMRI
   calibrationGainRight = [];
   noiseBufferSize = [];
   
-  AMfrequency = 15; % default amplitude modulation frequency(0 = no modulation)
-  NLevel = 0;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
+  AMfrequency = 0; % default amplitude modulation frequency(0 = no modulation)
+  NLevel = 35;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
   SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
                                   % a signal is just detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
