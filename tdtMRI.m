@@ -779,12 +779,14 @@ YPos = YPos-(editHeight+YGap);
           transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileRight]);
         end
         
+        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
         if TDT
+          %attenuate/increase level to fill 90% of voltage range
+          scaling = maxVoltage*0.9/max(max(fNoise));
           %write background noise to TDT
-          fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
-          invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
-          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)); %set the noise level
-          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)); %set the noise level
+          invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
+          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
+          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
           invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
         end
@@ -927,17 +929,7 @@ YPos = YPos-(editHeight+YGap);
           hCursorF=[];
         end
       end
-      if max(signal)>maxVoltage
-        %find which TDT attenuation setting would solve the problem
-        newHB7Gain = 3*ceil(20*(log10(max(signal)/maxVoltage))/3) + HB7Gain;
-        hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!!'],...
-                                         ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
-                       'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
-      else
-        if ishandle(hClipWarning)
-          delete(hClipWarning);
-        end
-      end
+      hClipWarning = checkSignalLevel(signal,hClipWarning);
       
       thisSyncTR=round(syncTR+(rand(1)-0.5)*10); %add random value to sync TR
 %     thisSyncTR=round(syncTR+rand(1)*1000));          
@@ -1184,6 +1176,20 @@ YPos = YPos-(editHeight+YGap);
     f = 1/4.37*(10^(nerb/21.4)-1);
   end
 
+  % ***** lcfInvNErb *****
+  function hClipWarning = checkSignalLevel(signal,hClipWarning)
+    if max(max(signal))>maxVoltage
+      %find which TDT attenuation setting would solve the problem
+      newHB7Gain = HB7Gain + 3*ceil(20*(log10(max(max(signal))/maxVoltage))/3);
+      hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!!'],...
+                                       ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
+                     'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
+    else
+      if ishandle(hClipWarning)
+        delete(hClipWarning);
+      end
+    end
+  end
 
   % ***** applyInverseTransfer
   function noise = applyInverseTransfer(noise)
