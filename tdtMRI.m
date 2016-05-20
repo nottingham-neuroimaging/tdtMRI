@@ -115,7 +115,7 @@ function tdtMRI
                       % of each stimulus
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
-  syncTR = 7500;            % delay between simulated scanner pulses
+  syncTR = 8000;            % delay between simulated scanner pulses
   nRepeatsPerRun = 4;       %number of times the set of unique stimuli is repeated in a run
   currentRun=0;    
   completedRuns=0;          %to keep track of completed runs

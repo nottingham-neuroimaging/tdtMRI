@@ -15,10 +15,7 @@ function [params,stimulus] = tonotopy_pRF_estHDR_noise(params,nRepeatsPerRun,Sti
 if isNotDefined('params')
     params = struct;
 end
-if fieldIsNotDefined(params,'AquistionType')
-    params.AquistionType = 0; % 1 = TR = block duration ie continuous
-    % 0 = TR > block duration ie sparse
-end
+
 if fieldIsNotDefined(params,'level')
     params.level = 75;
 end
@@ -29,7 +26,7 @@ if fieldIsNotDefined(params,'nBlocks')
     params.nBlocks = 4;  % number of blocks in a group
 end
 if fieldIsNotDefined(params,'nBaseline')
-    params.nBaseline = 2;  % multiple of number of noise groups (nCondtions = (nBlocks-1 *nRepeats)) of silent baseline groups
+    params.nBaseline = 6;  % multiple of number of noise groups (nCondtions = (nBlocks-1 *nRepeats)) of silent baseline groups
 end
 if fieldIsNotDefined(params,'nMorseTrain')
     params.nMorseTrain = 8; % number of beeps in train
@@ -59,8 +56,13 @@ if fieldIsNotDefined(params,'CF')
     params.CF = (params.highFrequency - params.lowFrequency) / 2;
 end
 if fieldIsNotDefined(params,'bandwidthERB')
+
+%    params.bandwidthERB = round(lcfInvNErb(lcfNErb((params.highFrequency - params.lowFrequency))));
+% % lowCuttingFrequencies = lcfInvNErb(lcfNErb(params.CF)-params.bandwidthERB/2);
+% % highCuttingFrequencies = lcfInvNErb(lcfNErb(params.CF)+params.bandwidthERB/2);
+% % % allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
+% % allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
     params.bandwidthERB = inf;
-%    params.bandwidthERB = round(lcfNErb((params.highFrequency - params.lowFrequency)));
 end
 
 
@@ -71,6 +73,13 @@ end
 
 if nargout==1
     return;
+end
+
+if StimTR == TR
+    AcquisitionType = 1; % 1 = TR = block duration ie continuous
+    % 0 = TR > block duration ie sparse
+elseif StimTR<TR
+    AcquisitionType = 0;
 end
 
 check = params.nMorseTrain - (params.nblockOnA + params.nblockOnB);
@@ -88,7 +97,7 @@ c=0;
 % if aquistion continuous
 % for continuous - need noise in each block of group
 % for sparse - don't won't noise in the first block of each group
-if params.AquistionType == 1
+if AcquisitionType == 1
     nCons = params.nBlocks * params.nRepeats;
 else
     nCons = (params.nBlocks-1) * params.nRepeats;
@@ -124,7 +133,7 @@ silence.name = sprintf('Silence');
 % for sparse - add first silence after randomising
 
 
-if params.AquistionType == 1
+if AcquisitionType == 1
     pad = repmat(silence,params.nBlocks-1,length(stimulus));
 else
     pad = repmat(silence,params.nBlocks-2,length(stimulus));
@@ -135,7 +144,9 @@ for i = 1:size(stimulus,1)
     ishift(i,:) = circshift([1:size(stimulus,1)],[1,params.nBlocks-i]);
 end
 ishift = repmat(ishift,1,params.nRepeats);
-stimulus = stimulus(ishift);
+for i = 1:size(stimulus,2)
+    stimulus(:,i) = stimulus(ishift(:,i),i);
+end
 % randomise position of noise
 for i = 1:size(stimulus,2)
     %     ix = randperm(size(stimulus,1));
@@ -153,14 +164,16 @@ end
 silence.number =  params.nBlocks +1; % number of fields in strucutres need to match to be concatenated
 % if aquistion sparse
 % add silent buffer at start of each group
-if params.AquistionType == 0
+if AcquisitionType == 0
     buffer = repmat(silence,1,size(stimulus,2));
     stimulus = [buffer; stimulus];
 end
 
 % nfCons = (params.nFrequencies * params.nRepeats)/(params.nNull-1);
-tCons = (100*nCons) / ((1/params.nBaseline)*100);
+tCons = (100*nCons) / (((params.nBaseline-1)/params.nBaseline)*100);
 nSilenceGroups = round(tCons - nCons);
+% tCons = (100*nCons) / ((1/params.nBaseline)*100);
+% nSilenceGroups = round(tCons - nCons);
 baseline = repmat(silence,params.nBlocks,nSilenceGroups);
 
 % randomise presentation order
