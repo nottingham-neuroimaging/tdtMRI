@@ -805,13 +805,13 @@ YPos = YPos-(editHeight+YGap);
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcond.\tfreq.(kHz)\tlevel(dB)\tbandwidth(kHz)\tduration(ms)\tname\tapproximate time (MM:SS)\n');
 
-        try
+%         try
           lcfOneRun %% run the stimulation
-        catch id
-          displayMessage({'There was an error running the circuit'})
-          disp(getReport(id));
-          lastButtonPressed = 'stop run';
-        end
+%         catch id
+%           displayMessage({'There was an error running the circuit'})
+%           disp(getReport(id));
+%           lastButtonPressed = 'stop run';
+%         end
         %close the log file
         if strcmp(lastButtonPressed,'start run') %if the stop button has not been pressed
           completedRuns = completedRuns+1;
@@ -863,7 +863,8 @@ YPos = YPos-(editHeight+YGap);
     [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR);
     %add at least one empty stimulus at the end (or as many as necessary so that 
     %the total number of stimuli is a multiple of nStimTRs and the last entire TDT cycle is empty)
-    nCycles = ceil(length(stimulus)/nStimTRs)+1;
+    nScans = ceil(length(stimulus)*stimTR/TR)+1;
+    nCycles = ceil(nScans/nTRs);
     for iStim = length(stimulus)+1:nCycles*nStimTRs
       stimulus(iStim).frequency=NaN;
       stimulus(iStim).level=NaN;
@@ -872,7 +873,6 @@ YPos = YPos-(editHeight+YGap);
       stimulus(iStim).number=0;
       stimulus(iStim).name='No stimulus';
     end
-    nScans = (nCycles-1)*nTRs+1;
 
     %synthesize signal for first stimulus/trials
     signal = makeSignal(stimulus(1:nStimTRs),signalSize());
@@ -912,7 +912,7 @@ YPos = YPos-(editHeight+YGap);
     displayMessage({'Received trigger'});
    
     %Main loop
-    while currentTrigger<nCycles-1 && ~strcmp(lastButtonPressed,'stop run')
+    while currentTrigger<nCycles && ~strcmp(lastButtonPressed,'stop run')
         
       currentTrigger=nextTrigger;
       currentTrials = (currentTrigger-1)*nStimTRs+(1:nStimTRs);
@@ -939,7 +939,9 @@ YPos = YPos-(editHeight+YGap);
       end
       
       %compute signal for next stimulus/trials (i+1)
-      signal = makeSignal(stimulus(currentTrigger*nStimTRs+(1:nStimTRs)),signalSize());
+      if currentTrigger<nCycles
+        signal = makeSignal(stimulus(currentTrigger*nStimTRs+(1:nStimTRs)),signalSize());
+      end
 
       if TDT %get the sample counter
         bufferCount =  double(invoke(RP2,'GetTagVal','BufIdx'));
@@ -967,22 +969,22 @@ YPos = YPos-(editHeight+YGap);
         break                   %break out of the loop
       end
 
-      if TDT % write first half of new stimulus to buffer (cond i+1) while second half is being played
+      if TDT && currentTrigger<nCycles % write first half of new stimulus to buffer (cond i+1) while second half is being played
         invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:nStimTRs*signalSize()/2)/maxVoltage*(2^15-1)));   
       end
  
       % wait for RP2 to receive the next scanner/simulated trigger 
       while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
         pause(0.05) % leave a chance to user to press a button
-        if currentTrigger>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
+        if currentTrigger>0 && ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
           elapsedTime = datevec(now-timeTrigger);
           bufferCount = round((elapsedTime(6))*1000/sampleDuration);
           set(hCursorT,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
           set(hCursorF,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
         end
-        if TDT
+        if TDT && currentTrigger<nCycles
           nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
-        else %or if there is no TDT running
+        else %or if there is no TDT running (or it is the last scan)
           if any(datevec(now-timeTrigger)>ceil((minTR+1)/thisSyncTR)*thisSyncTR/1000)    %otherwise, see if enough time has passed
                 nextTrigger=currentTrigger+1;
           end
