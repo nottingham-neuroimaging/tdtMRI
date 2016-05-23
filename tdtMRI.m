@@ -529,6 +529,7 @@ YPos = YPos-(editHeight+YGap);
         stimTR = 1000*eval(get(handleCaller,'String'));
         nStimTRs = round(TDTcycle/stimTR);    %number of stimTRs that fit in a TDT cycle
         updateRunInfo   %update the run duration according to the new stimTR value
+        plotSignal(zeros(1,nStimTRs*signalSize()));
         
       case('noiseLevel')
         NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
@@ -1253,6 +1254,9 @@ YPos = YPos-(editHeight+YGap);
     plot(hTimeseries,[0 TDTcycle/1000],[maxVoltage maxVoltage],'r--');
     plot(hTimeseries,[0 TDTcycle/1000],-1*[maxVoltage maxVoltage],'r--');
     hCursorT = plot(hTimeseries,[0 0],get(hTimeseries,'Ylim'),'r');
+    if nStimTRs>1
+      plot(hTimeseries,repmat((1:nStimTRs-1)*stimTR/1000,2,1), repmat(get(hTimeseries,'Ylim')',1,nStimTRs-1),'r:');
+    end
     set(hTimeseries,'XLim',[0 TDTcycle/1000])
     set(get(hTimeseries,'XLabel'),'String','Time(s)','FontName','Arial','FontSize',10)
     set(get(hTimeseries,'YLabel'),'String','Amplitude','FontName','Arial','FontSize',10)
@@ -1270,6 +1274,9 @@ YPos = YPos-(editHeight+YGap);
     colormap(hSpectrogram,jet); 
     hCursorF = plot(hSpectrogram,[0 0],get(hSpectrogram,'Ylim'),'k');
     set(hSpectrogram,'XLim',[0 TDTcycle/1000]);
+    if nStimTRs>1
+      plot(hSpectrogram,repmat((1:nStimTRs-1)*stimTR/1000,2,1), repmat(get(hSpectrogram,'Ylim')',1,nStimTRs-1),'k:');
+    end
     set(get(hSpectrogram,'XLabel'),'String','Time (s)','FontName','Arial','FontSize',10)
     set(get(hSpectrogram,'YLabel'),'String','Frequency (Hz)','FontName','Arial','FontSize',10)
 
