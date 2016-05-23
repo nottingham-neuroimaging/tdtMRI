@@ -976,7 +976,9 @@ YPos = YPos-(editHeight+YGap);
       % wait for RP2 to receive the next scanner/simulated trigger 
       while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
         pause(0.05) % leave a chance to user to press a button
-        if currentTrigger>0 && ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
+        if currentTrigger>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
+          %(leave this single '&' despite what matlab says, otherwise gets an error if 'Display sounds' is checked during playback,
+          % this is because '&' but not '&&' accepts empty arguments and 'if []' is valid and is equivalent to 'if false')
           elapsedTime = datevec(now-timeTrigger);
           bufferCount = round((elapsedTime(6))*1000/sampleDuration);
           set(hCursorT,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
