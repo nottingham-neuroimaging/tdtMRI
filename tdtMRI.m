@@ -95,7 +95,7 @@ function tdtMRI
   headphones = 'Sensimetrics S14';
   maxVoltage = 10; %saturation voltage of TDT
   if TDT
-    getTagValDelay = .5; % the approximate time it takes to get values from the RP2 (in sec)
+    getTagValDelay = 500; % the approximate time it takes to get values from the RP2 (in msec)
   else
     getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
   end
@@ -914,7 +914,7 @@ YPos = YPos-(editHeight+YGap);
    
     %Main loop
     while currentTrigger<nCycles && ~strcmp(lastButtonPressed,'stop run')
-        
+      currentStimTR = 1;
       currentTrigger=nextTrigger;
       currentTrials = (currentTrigger-1)*nStimTRs+(1:nStimTRs);
       currentScans = ceil(currentTrials/nStimTRs*nTRs);
@@ -953,10 +953,15 @@ YPos = YPos-(editHeight+YGap);
       % wait for RP2 to get to middle of buffer 
       while bufferCount<nStimTRs*signalSize()/2 && ~strcmp(lastButtonPressed,'stop run') 
         pause(0.05)                                                           
+        currentTime = bufferCount*sampleDuration+getTagValDelay;
+        if nStimTRs>1 && currentStimTR < nStimTRs && ceil(currentTime/stimTR)>currentStimTR
+          currentStimTR = currentStimTR +1;
+          updateTrialInfo(currentScans(currentStimTR),nScans,stimulus(currentTrials(currentStimTR)).number,stimulus(currentTrials(currentStimTR)).name);
+        end
         % update the cursor position to the estimated elapsed time since the start of the signal
         if ishandle(hCursorT)  
-          set(hCursorT,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
-          set(hCursorF,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);  
+          set(hCursorT,'Xdata',ones(1,2)*currentTime/1000);
+          set(hCursorF,'Xdata',ones(1,2)*currentTime/1000);
         end
         if TDT
           bufferCount = double(invoke(RP2,'GetTagVal','BufIdx'));
@@ -977,13 +982,18 @@ YPos = YPos-(editHeight+YGap);
       % wait for RP2 to receive the next scanner/simulated trigger 
       while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
         pause(0.05) % leave a chance to user to press a button
+        elapsedTime = datevec(now-timeTrigger);
+        bufferCount = round((elapsedTime(6))*1000/sampleDuration);
+        currentTime = bufferCount*sampleDuration+getTagValDelay;
         if currentTrigger>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
           %(leave this single '&' despite what matlab says, otherwise gets an error if 'Display sounds' is checked during playback,
           % this is because '&' but not '&&' accepts empty arguments and 'if []' is valid and is equivalent to 'if false')
-          elapsedTime = datevec(now-timeTrigger);
-          bufferCount = round((elapsedTime(6))*1000/sampleDuration);
-          set(hCursorT,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
-          set(hCursorF,'Xdata',ones(1,2)*bufferCount*sampleDuration/1000+getTagValDelay);    
+          set(hCursorT,'Xdata',ones(1,2)*currentTime/1000);
+          set(hCursorF,'Xdata',ones(1,2)*currentTime/1000);
+        end
+        if nStimTRs>1 && currentStimTR < nStimTRs && ceil(currentTime/stimTR)>currentStimTR
+          currentStimTR = currentStimTR +1;
+          updateTrialInfo(currentScans(currentStimTR),nScans,stimulus(currentTrials(currentStimTR)).number,stimulus(currentTrials(currentStimTR)).name);
         end
         if TDT && currentTrigger<nCycles
           nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
