@@ -1,6 +1,6 @@
 function plotTransferFunctions
 
-files = [dir([pwd '\*clicks_*.csv']);dir([pwd '\*click_*.mat']);dir([pwd '\*.bin'])];
+files = [dir([pwd '\transferFunctions\*clicks_*.csv']);dir([pwd '\transferFunctions\*click_*.mat']);dir([pwd '\transferFunctions\*.bin'])];
 
 startTime=-1; %in ms
 endTime=5;  %in ms
@@ -35,7 +35,7 @@ title('Impulse Response');
 count=0;
 colors = 'bgrmk';
 for iFile = 1:length(files)
-  [transfer,data] = loadInsertsTransfer([pwd '/' files(iFile).name]);
+  [transfer,data] = loadTransferFunction_old([pwd '/transferFunctions/' files(iFile).name]);
   if strfind(files(iFile).name,'HD')
     style = '--';
   else

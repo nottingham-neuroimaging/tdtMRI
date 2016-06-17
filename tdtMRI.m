@@ -2,17 +2,17 @@
 %
 %   author: Julien Besle, based on Cris Lanting's MRITonotopy
 %     date: 12/02/2013
-%  purpose: Sound presentation for fMRI using a TDT RP2 real-time processor 
+%  purpose: Sound presentation for fMRI using a TDT RP2 or MP1 real-time processor
 %           Each stimulus must be less than one TR and is synchronised to
 %           a trigger received from the scanner through the TRIG input of the
 %           RP2. TR must be at least 4s long, presumably because of the time it takes
 %           to communicate with the processor (writing data, getting counter values, etc..).
 %           Stimuli are synthesized in matlab as one or several simultaneous 
-%           (not tested) streams of bandpass noises, presented over a continuous
+%           (not tested) streams of bandpass noises or pure tones, presented over a continuous
 %           broadband (equal energy) noise background. Parameters of the bandpass noises
-%           (frequency, bandwidth, duration, level) are controlled through
-%           a user-specific 'parameter' function that reads numerical parameters 
-%           and outputs a sequence of complex stimuli.
+%           (frequency, bandwidth, duration, level; for pure tones, set bandwidth to 0)
+%           are controlled through a user-specific 'parameter' function that reads
+%           numerical parameters and outputs a sequence of complex stimuli.
 %           The application's GUI allows the user to change general parameters
 %           (number of epochs per run, TR) and parameters specific to the parameter
 %           function. It also features button to start/stop the TDT
@@ -64,6 +64,13 @@
 %               - level: level of each bandpass noise in dB (over noise ?)
 %               - bandwidth: bandwidthof each bandpass noise
 %               - duration: duration of each bandpass noise in milliseconds
+%
+%           Update May 2016: added stimTR parameter that allows the TR to
+%           be subdivided in several stimuli of equal duration in order to
+%           enable continous acquisition fMRI experiments
+%
+%           Update June 2016: Added support for MB1 portable TDT signal
+%           processor (with Jaakko Kauramaki at BRAMS, Universite de Montreal)
 
 function tdtMRI
 
@@ -89,12 +96,18 @@ function tdtMRI
     return;
   end
 
-  TDT = true;    %set fo False to debug without switching the TDT on
+  tdtOptions = {'RP2-HB7','MB1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
+  TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
+  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'None'};
+  headphones = headphonesOptions{5};
   displaySounds = false;
-  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'None'};
-  headphones = 'Sensimetrics S14';
+  if isempty(which('spectrogram')) %if there is no processing toolbox, use the alternative spectrogram function
+    spectrogramFunction = @spectrogram2;
+  else
+    spectrogramFunction = @spectrogram;
+  end
   maxVoltage = 10; %saturation voltage of TDT
-  if TDT
+  if ismember(TDT,tdtOptions(1:2))
     getTagValDelay = 500; % the approximate time it takes to get values from the RP2 (in msec)
   else
     getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
@@ -369,7 +382,7 @@ YPos = YPos-(editHeight+YGap);
   windowHeight = 0.4;
   YGap = 0.05;
   XPos = 0.075;
-  YPos = 0.275;
+  YPos = 0.3;
   hSpectrogram = axes('Parent',gcf,...
      'Units','normalized',...
      'Position',[XPos YPos windowWidth windowHeight],...
@@ -388,17 +401,25 @@ YPos = YPos-(editHeight+YGap);
   YGap = 0.0075;
   XPos = 0.05;
   
-  YPos = 0.21;
+  YPos = 0.2;
   uicontrol('Parent',hMainFigure,...    %sound display checkbox
     'Callback',{@mainCallback,'displaySounds'},...
     'BackgroundColor',lGray,...
-    'Position',[XPos YPos Width checkBoxHeight], ...
+    'Position',[XPos+Width+XGap YPos Width buttonHeight], ...
     'Style','checkbox',...
     'String','Display sounds', ...
     'value',displaySounds);
  
+  YPos = 0.19;
+  hTDT = uicontrol('Parent',hMainFigure,...    %TDT dropdown menu
+    'Callback',{@mainCallback,'TDT'},...
+    'Position',[XPos YPos Width buttonHeight], ...
+    'Style','popupmenu',...
+    'String',tdtOptions, ...
+    'value',find(ismember(tdtOptions,TDT)));
+
   YPos = 0.14;
-  hInserts = uicontrol('Parent',hMainFigure,...    %headphones checkbox
+  hHeadphones = uicontrol('Parent',hMainFigure,...    %headphones dropdown menu
     'Callback',{@mainCallback,'headphones'},...
     'Position',[XPos YPos Width buttonHeight], ...
     'Style','popupmenu',...
@@ -542,13 +563,16 @@ YPos = YPos-(editHeight+YGap);
         updateRunInfo   %update the run duration according to the new parameters
       
       case('displaySounds')
-        displaySounds=get(handleCaller,'Value'); % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
+        displaySounds=get(handleCaller,'Value');
         if ~displaySounds
           plotSignal(zeros(1,nStimTRs*signalSize()));
         end
         
+      case('TDT')
+        TDT=tdtOptions{get(handleCaller,'Value')};
+        
       case('headphones')
-        headphones=headphonesOptions{get(handleCaller,'Value')}; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
+        headphones=headphonesOptions{get(handleCaller,'Value')};
         
       case 'SynTrig' %user presses the simulated trigger button (this is only possible during a run)
         %the button has two states (3 = pushed, 4 = released)
@@ -559,7 +583,7 @@ YPos = YPos-(editHeight+YGap);
           %otherwise toggle between the two states 
           simulatedTriggerToggle = 4-mod(simulatedTriggerToggle+1,2);
         end
-        if TDT %switch simulated trigger according to state (3=on, 4=off)
+        if ismember(TDT,tdtOptions(1:2)) %switch simulated trigger according to state (3=on, 4=off)
           invoke(RP2,'SoftTrg',simulatedTriggerToggle); 
         end
         % The state of the button is symbolized by its background colour
@@ -576,7 +600,7 @@ YPos = YPos-(editHeight+YGap);
         
       case('StartCircuit')    
 
-        if TDT
+        if ismember(TDT,tdtOptions(1:2))
           displayMessage({'Creating TDT ActiveX interface...'})
           HActX = figure('position',[0.2*ScreenPos(3)/100 (75+2.25)*ScreenPos(4)/100 (100-0.4)*ScreenPos(3)/100 (25-4.3)*ScreenPos(4)/100],...
               'menubar','none',...
@@ -585,10 +609,16 @@ YPos = YPos-(editHeight+YGap);
               'visible','off');
           pos = get(HActX,'Position');
 
-          RP2 = actxcontrol('RPco.x',pos,HActX);  %create an activeX control for TDT RP2
-          invoke(RP2,'ConnectRP2','USB',1); %connect to the RP2 via the USB port
+          RP2 = actxcontrol('RPco.x',pos,HActX);  %create an activeX control for TDT RP2 or RM1
+          switch(TDT)
+            case tdtOptions{1} %RP2
+              invoke(RP2,'ConnectRP2','USB',1); %connect to the RP2 via the USB port
+              circuitFilename = [pathString '\tdtMRI_RP2.rcx'];
+            case tdtOptions{2}
+              invoke(RP2,'ConnectRM1','USB',1); %connect to the RP2 via the USB port
+              circuitFilename = [pathString '\tdtMRI_RM1.rcx'];
+          end
           invoke(RP2,'ClearCOF');
-          circuitFilename = [pathString '\tdtMRI.rcx'];
           if ~exist(circuitFilename,'file') %check that the circuit object file exists
               displayMessage({sprintf('==> Cannot find circuit %s',circuitFilename)});
               return
@@ -599,10 +629,14 @@ YPos = YPos-(editHeight+YGap);
             delete(HActX) %if not, delete the activeX figure
             return
           else
-            displayMessage({'RP2 circuit loaded and running!'})
+            displayMessage({'TDT circuit loaded and running!'})
           end
-          displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB and NNL gain to %.0f !',HB7Gain, NNLsetting)});
-          displayMessage('==> Make sure the red BNC is connected to the HB7 left output (for NNL headphones)');
+          if isequal(TDT,tdtOptions{1})
+            displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB!',HB7Gain)});
+          end
+          if ismember(headphones,headphonesOptions(1:2))
+              displayMessage({sprintf('==> Make sure NNL gain is set to %.0f and the red BNC is connected to the HB7 left output!', NNLsetting)});
+          end
           
           %check that the sampling rate of the circuit is the same as the one set in this program
           % (alternatively, could read the sampling rate from the circuit)
@@ -625,11 +659,12 @@ YPos = YPos-(editHeight+YGap);
         set(hStartCircuit,'Enable','off')
         set(hStartRun,'Enable','on')
         set(hStopCircuit,'Enable','on')
+        set(hTDT,'Enable','off')
         displayMessage({'Proceed by pressing <Start run> ...'});
         
 
       case('StopCircuit')
-        if TDT && circuitRunning
+        if ismember(TDT,tdtOptions(1:2)) && circuitRunning
           displayMessage({'Stopping TDT circuit, please wait'});
           invoke(RP2,'Halt');
           delete(HActX)
@@ -643,6 +678,7 @@ YPos = YPos-(editHeight+YGap);
         if exist('hStartCircuit','var')
             set(hStartCircuit,'Enable','on')
         end
+        set(hTDT,'Enable','on')
         if exist('hMessage','var')
             displayMessage({'Circuit stopped';''});
         end
@@ -678,14 +714,14 @@ YPos = YPos-(editHeight+YGap);
         end
         
         %check that the circuit is running (in case TDT has been turned off)
-        if TDT && ~testRP2()
+        if ismember(TDT,tdtOptions(1:2)) && ~testRP2()
           mainCallback(handleCaller,[],'StopCircuit');
           return
         end       
         displayMessage({'Initializing circuit, please wait...'});
         %check that there is enough space in the SerSource buffer for
         %signal plus trailing zeroes
-        if TDT
+        if ismember(TDT,tdtOptions(1:2))
           if nStimTRs*signalSize()>= signalBufferMaxSize - signalExtraZeroes % cannot allocate more memory than that set 
               % at circuit compilation (currently 300000 samples ~= 12.8 seconds)
               displayMessage({'==> ERROR: TR is too long.';'Increase initial SignalBufSize in circuit'}) 
@@ -702,7 +738,7 @@ YPos = YPos-(editHeight+YGap);
         %disable buttons/edit boxes
         set(hStartRun,'Enable','off')
         set(hStopCircuit,'Enable','off')
-        set(hInserts,'Enable','off')
+        set(hHeadphones,'Enable','off')
         set(hParticipant,'Enable','off')
         set(hSyncTR,'Enable','off')
         set(hParamsFunction,'Enable','off')
@@ -750,20 +786,32 @@ YPos = YPos-(editHeight+YGap);
           case 'Sensimetrics S14'
             calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
             calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
-            transferFunctionFile = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            transferFunctionFile = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFileLeft = 'S14insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'S14insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileLeft = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_396insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'S14_396insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+          case 'S14 BRAMS (335)'
+            calibrationLevelLeft = 80.0; % calibration 17/06/2016 left side
+            calibrationLevelRight = 80.0; % calibration 17/06/2016 right side
+            transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
           case 'None'
             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphones. Use these as the level of a 1kHz sinewave 
             calibrationLevelRight = 81.6;  % so that its max voltage is 1 (on the corresponding side)
         end
         calibrationLevelLeft = calibrationLevelLeft + 3; %corresponding level for a 1voltRMS noise
         calibrationLevelRight = calibrationLevelRight + 3; %corresponding level for a 1voltRMS noise
-        calibrationGainLeft = -calibrationLevelLeft+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); 
-        calibrationGainRight = -calibrationLevelRight+HB7CalibGain+NNLGain(NNLCalibSetting)-HB7Gain-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
-        %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings
+        if ismember(TDT,tdtOptions(1))
+          calibrationGainLeft = -calibrationLevelLeft+HB7CalibGain-HB7Gain; 
+          calibrationGainRight = -calibrationLevelRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
+        end
+        if ismember(headphones,headphonesOptions(1:2))
+          calibrationGainLeft = -calibrationLevelLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
+          calibrationGainRight = -calibrationLevelRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
+        end
+        %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings (optionally)
         %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
         %with peak amplitude 1V (rms=1/sqrt(2)) results in a 65.5dB SPL sound level. Therefore an arbitrary signal with rms=1V would result in
         %a 68.5 dB SPL level (*sqrt(2) <-> +3dB)
@@ -776,12 +824,13 @@ YPos = YPos-(editHeight+YGap);
         %load insert transfer inverse filter parameters
         if ~strcmp(headphones,'None')
 %           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
-          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileLeft]);
-          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/' transferFunctionFileRight]);
+          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft]);
+          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight]);
         end
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
-        if TDT
+        noisePlayer = [];
+        if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
           scaling = maxVoltage*0.9/max(max(fNoise));
           %write background noise to TDT
@@ -790,6 +839,14 @@ YPos = YPos-(editHeight+YGap);
           invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
           invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
+        elseif ismember(TDT,tdtOptions(4))
+          % 2016-06-07 mod by Jaakko, play noise in the background with audiocard
+          durationSec = getNumberTRs()*TR/1000; 
+          fNoiseLong=repmat(fNoise,1,1+ceil(durationSec/(size(fNoise,2)/24414.0625))); % noise 11-22s longer than actual stimulation due to ceil(), should be ok
+          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE)/20);
+          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE)/20);
+          noisePlayer = audioplayer(fNoiseLong,24414.0625); 
+          play(noisePlayer);
         end
         
         %write log file header
@@ -806,13 +863,13 @@ YPos = YPos-(editHeight+YGap);
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcond.\tfreq.(kHz)\tlevel(dB)\tbandwidth(kHz)\tduration(ms)\tname\tapproximate time (MM:SS)\n');
 
-%         try
-          lcfOneRun %% run the stimulation
-%         catch id
-%           displayMessage({'There was an error running the circuit'})
-%           disp(getReport(id));
-%           lastButtonPressed = 'stop run';
-%         end
+        try
+          lcfOneRun(noisePlayer) %% run the stimulation
+        catch id
+          displayMessage({'There was an error running the circuit'})
+          disp(getReport(id));
+          lastButtonPressed = 'stop run';
+        end
         %close the log file
         if strcmp(lastButtonPressed,'start run') %if the stop button has not been pressed
           completedRuns = completedRuns+1;
@@ -840,7 +897,7 @@ YPos = YPos-(editHeight+YGap);
         set(hParams(1:usedAddParams),'Enable','on')
         set(hStartRun,'Enable','on')
         set(hStopCircuit,'Enable','on')
-        set(hInserts,'Enable','on')
+        set(hHeadphones,'Enable','on')
         set(hSyncTR,'Enable','on')
         mainCallback([],[],'SynTrig',4); %reset Simulated trigger button to off state
         displayMessage({'Proceed by pressing <Start run> ...'});
@@ -858,7 +915,7 @@ YPos = YPos-(editHeight+YGap);
   end
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ***** lcfOneRun *****
-  function lcfOneRun()
+  function lcfOneRun(noisePlayer)
 
     % Compute stimulus parameters for this run
     [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR);
@@ -878,7 +935,7 @@ YPos = YPos-(editHeight+YGap);
     %synthesize signal for first stimulus/trials
     signal = makeSignal(stimulus(1:nStimTRs),signalSize());
 
-    if TDT
+    if ismember(TDT,tdtOptions(1:2))
       invoke(RP2,'SetTagVal','SignalSize',nStimTRs*signalSize()+signalExtraZeroes); %this is when to stop the serSource if a trigger has not been received
       invoke(RP2,'SetTagVal','NTrials',length(stimulus)+1);     %set this to something larger than the number of dynamic scans
       invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:nStimTRs*signalSize()/2)/maxVoltage*(2^15-1)));   %write first half of first stimulus to buffer
@@ -902,9 +959,12 @@ YPos = YPos-(editHeight+YGap);
     % wait for RP2 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
     while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
       pause(0.05) % leave a chance to user to press a button
-      if TDT
+      if ismember(TDT,tdtOptions(1:2))
         nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
       elseif simulatedTriggerToggle==3      % or if there is no TDT running, just check that the simulated trigger is on)
+        if ismember(TDT,tdtOptions(4))
+          sound(signal,24414.0625); % 2016-06-07 modded by Jaakko, play the WHOLE sound
+        end
         nextTrigger=currentTrigger+1;
       end
     end
@@ -934,7 +994,7 @@ YPos = YPos-(editHeight+YGap);
       
       thisSyncTR=round(syncTR+(rand(1)-0.5)*10); %add random value to sync TR
 %     thisSyncTR=round(syncTR+rand(1)*1000));          
-      if TDT %write second half of signal to buffer (trial i) while the first half is playing
+      if ismember(TDT,tdtOptions(1:2)) %write second half of signal to buffer (trial i) while the first half is playing
         invoke(RP2,'WriteTagVEX','Signal',nStimTRs*signalSize()/2,'I16',round(signal(:,nStimTRs*signalSize()/2+1:end)/maxVoltage*(2^15-1)));      
         invoke(RP2,'SetTagVal','SynTR',thisSyncTR/sampleDuration);      %set duration of simulated trigger TR in samples (with a  bit of jitter)    
       end
@@ -944,7 +1004,7 @@ YPos = YPos-(editHeight+YGap);
         signal = makeSignal(stimulus(currentTrigger*nStimTRs+(1:nStimTRs)),signalSize());
       end
 
-      if TDT %get the sample counter
+      if ismember(TDT,tdtOptions(1:2)) %get the sample counter
         bufferCount =  double(invoke(RP2,'GetTagVal','BufIdx'));
       else %if no TDT is running, just get an estimate of sample count based on elapsed time
         elapsedTime = datevec(now-timeTrigger);
@@ -963,7 +1023,7 @@ YPos = YPos-(editHeight+YGap);
           set(hCursorT,'Xdata',ones(1,2)*currentTime/1000);
           set(hCursorF,'Xdata',ones(1,2)*currentTime/1000);
         end
-        if TDT
+        if ismember(TDT,tdtOptions(1:2))
           bufferCount = double(invoke(RP2,'GetTagVal','BufIdx'));
         else
           elapsedTime = datevec(now-timeTrigger);
@@ -975,7 +1035,7 @@ YPos = YPos-(editHeight+YGap);
         break                   %break out of the loop
       end
 
-      if TDT && currentTrigger<nCycles % write first half of new stimulus to buffer (cond i+1) while second half is being played
+      if ismember(TDT,tdtOptions(1:2)) && currentTrigger<nCycles % write first half of new stimulus to buffer (cond i+1) while second half is being played
         invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(signal(:,1:nStimTRs*signalSize()/2)/maxVoltage*(2^15-1)));   
       end
  
@@ -995,11 +1055,14 @@ YPos = YPos-(editHeight+YGap);
           currentStimTR = currentStimTR +1;
           updateTrialInfo(currentScans(currentStimTR),nScans,stimulus(currentTrials(currentStimTR)).number,stimulus(currentTrials(currentStimTR)).name);
         end
-        if TDT && currentTrigger<nCycles
+        if ismember(TDT,tdtOptions(1:2)) && currentTrigger<nCycles
           nextTrigger=double(invoke(RP2,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
         else %or if there is no TDT running (or it is the last scan)
           if any(datevec(now-timeTrigger)>ceil((minTR+1)/thisSyncTR)*thisSyncTR/1000)    %otherwise, see if enough time has passed
-                nextTrigger=currentTrigger+1;
+            if ismember(TDT,tdtOptions(4))
+              sound(signal,24414.0625); % 2016-06-07 modded by Jaakko, play the WHOLE sound
+            end
+            nextTrigger=currentTrigger+1;
           end
         end
       end                            
@@ -1010,11 +1073,13 @@ YPos = YPos-(editHeight+YGap);
     %erase signal visualisation
     plotSignal(zeros(1,nStimTRs*signalSize()));
     updateTrialInfo([],[],[]);
-    if TDT    %stop stimulus presentation 
+    if ismember(TDT,tdtOptions(1:2))    %stop stimulus presentation
       invoke(RP2,'SoftTrg',2); %prevents trigger from sending new signal
       invoke(RP2,'WriteTagVEX','Signal',0,'I16',round(zeros(2,signalBufferMaxSize)/maxVoltage*(2^15-1))); %erase all signal in  serial source 
 %       invoke(RP2,'WriteTagVEX','Signal',nStimTRs*signalSize()/2,'I16',round(signal(:,nStimTRs*signalSize()/2+1:end)/maxVoltage*(2^15-1))); %write second half of last (empty) stimulus to buffer
 %       (this should be enough, but sometimes there's something left form previous runs, not sure why...)
+    elseif ismember(TDT,tdtOptions(4))    %stop noise presentation if using soundcard
+      stop(noisePlayer);
     end
     if strcmp(lastButtonPressed,'stop run')
       for II = 1:3
@@ -1091,6 +1156,14 @@ YPos = YPos-(editHeight+YGap);
         modenv = sin(2*pi*AMod*sampleDuration*(0:N-1));
         noise = (1+modenv).*noise;    
       end
+      
+      % 2016-06-07 mod by jaakko, add 20-ms raised cosine onset and offset
+      % ramps; raised cosine = hann window
+%       modenv = ones(1,N);
+%       hann_wnd=hann(round(0.040*1000/sampleDuration)); % 20+20ms = 0.040s
+%       modenv(1:round(numel(hann_wnd)/2))=hann_wnd(1:round(numel(hann_wnd)/2)); % onset ramp
+%       modenv(end-round(numel(hann_wnd)/2):end)=hann_wnd(end-round(numel(hann_wnd)/2):end); %offset ramp
+%       noise=modenv.*noise;
 
       noise = repmat(noise/sqrt(mean(noise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
       if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
@@ -1273,7 +1346,7 @@ YPos = YPos-(editHeight+YGap);
     set(hTimeseries,'XLim',[0 TDTcycle/1000]);
     title(hTimeseries,'Cursor position is approximate !');
 
-    [specg,frq,t] = spectrogram(signal,round(100/sampleDuration),round(80/sampleDuration),round(50/sampleDuration),1000/sampleDuration);
+    [specg,frq,t] = spectrogramFunction(signal,round(100/sampleDuration),round(80/sampleDuration),round(50/sampleDuration),1000/sampleDuration);
     hold(hSpectrogram,'off');
     surf(hSpectrogram,t,frq,10*log10(abs(specg)),'EdgeColor','none');
     hold(hSpectrogram,'on');
@@ -1302,12 +1375,19 @@ YPos = YPos-(editHeight+YGap);
   function updateRunInfo
 
     if ~isempty(params) && ~isempty(nRepeatsPerRun)
-      [~,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR); %get a set of stimuli for the current parameter values
+      totalTRs = getNumberTRs();
+      % compute and display the run length in TR and minutes (I add one because there is always an extra TR with no stimulus at the end)
       strg = get(hNScans,'String'); %display the number of dynamic scans
-      % compute and display the run length in TR and minutes (I add one because the there is always an extra TR with no stimulus at the end)
-      totalTRs = ceil(length(stimulus)*stimTR/TR)+1;
       set(hNScans,'string',sprintf('%s %g (%s)',strg(1:strfind(strg,':')),totalTRs,scansToMinutes(totalTRs,TR)));
     end
+  end
+
+  % ***** getNumberTRs *****
+  function totalTRs = getNumberTRs()
+
+    [dump,stimulus]= feval(parameterFunction,params,nRepeatsPerRun,stimTR,TR); %get a set of stimuli for the current parameter values
+    totalTRs = ceil(length(stimulus)*stimTR/TR)+1;
+    
   end
 
   % ***** updateTrialInfo *****
