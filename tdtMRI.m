@@ -69,7 +69,7 @@
 %           be subdivided in several stimuli of equal duration in order to
 %           enable continous acquisition fMRI experiments
 %
-%           Update June 2016: Added support for MB1 portable TDT signal
+%           Update June 2016: Added support for RM1 portable TDT signal
 %           processor (with Jaakko Kauramaki at BRAMS, Universite de Montreal)
 
 function tdtMRI
@@ -96,8 +96,8 @@ function tdtMRI
     return;
   end
 
-  tdtOptions = {'RP2-HB7','MB1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
-  TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
+  tdtOptions = {'RP2-HB7','RM1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
+  TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
   headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'None'};
   headphones = headphonesOptions{5};
   displaySounds = false;
@@ -634,6 +634,9 @@ YPos = YPos-(editHeight+YGap);
           if isequal(TDT,tdtOptions{1})
             displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB!',HB7Gain)});
           end
+          if isequal(TDT,tdtOptions{2})
+            displayMessage({'==> Make sure TDT RM1 gain is set to MAXIMUM!'});
+          end
           if ismember(headphones,headphonesOptions(1:2))
               displayMessage({sprintf('==> Make sure NNL gain is set to %.0f and the red BNC is connected to the HB7 left output!', NNLsetting)});
           end
@@ -754,7 +757,7 @@ YPos = YPos-(editHeight+YGap);
         
         %compute the gain to apply to background noise and sounds
         switch headphones
-          case 'NNL Inserts'
+          case 'NNL Inserts' %(assumes that these earphones are driven with the TDT RP2+HB7)
             calibrationLevel = 65.5;  % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the inserts with the above calibration settings (TDT output = -27dB and NNL output = 6)
             calibrationLevelLeft  = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
             calibrationLevelRight = 72.0; % calibration 04/03/2016 right side
@@ -762,7 +765,8 @@ YPos = YPos-(editHeight+YGap);
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
             transferFunctionFileLeft = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
             transferFunctionFileRight = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
-          case 'NNL Headphones'
+            
+          case 'NNL Headphones' %(assumes that these earphones are driven with the TDT RP2+HB7)
 %             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
 %                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
             calibrationLevel = 82.3; % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the NNL headphones with the above calibration settings
@@ -772,7 +776,8 @@ YPos = YPos-(editHeight+YGap);
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
             transferFunctionFileLeft = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
             transferFunctionFileRight = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
-          case 'Sennheiser HD 212Pro'
+            
+          case 'Sennheiser HD 212Pro' %(assumes that these earphones are driven with the TDT RP2+HB7)
 %             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
 %                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
 %                                     % correcting for differences in amplitudes of the impulse)
@@ -783,33 +788,37 @@ YPos = YPos-(editHeight+YGap);
             %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
             transferFunctionFileLeft = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
             transferFunctionFileRight = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
-          case 'Sensimetrics S14'
+            
+          case 'Sensimetrics S14' %(assumes that these earphones are driven with the TDT RP2+HB7)
             calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
             calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
             transferFunctionFileLeft = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
             transferFunctionFileRight = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
             transferFunctionFileLeft = 'S14_396insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
             transferFunctionFileRight = 'S14_396insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-          case 'S14 BRAMS (335)'
-            calibrationLevelLeft = 80.0; % calibration 17/06/2016 left side
-            calibrationLevelRight = 80.0; % calibration 17/06/2016 right side
-            transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            
+          case 'S14 BRAMS (335)' %(assumes that these earphones are driven with the TDT RM1)
+            calibrationLevelLeft = 101.0; % calibration 17/06/2016 left side with RM1  
+            calibrationLevelRight = 101.6; % calibration 17/06/2016 right side with RM1
+            transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
+            transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
+            
           case 'None'
-            calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphones. Use these as the level of a 1kHz sinewave 
-            calibrationLevelRight = 81.6;  % so that its max voltage is 1 (on the corresponding side)
+            calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
+            calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
+            
         end
-        calibrationLevelLeft = calibrationLevelLeft + 3; %corresponding level for a 1voltRMS noise
-        calibrationLevelRight = calibrationLevelRight + 3; %corresponding level for a 1voltRMS noise
+        calibrationGainLeft = - calibrationLevelLeft - 3; %corresponding level for a 1voltRMS noise
+        calibrationGainRight = - calibrationLevelRight - 3; %corresponding level for a 1voltRMS noise
         if ismember(TDT,tdtOptions(1))
-          calibrationGainLeft = -calibrationLevelLeft+HB7CalibGain-HB7Gain; 
-          calibrationGainRight = -calibrationLevelRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
+          calibrationGainLeft = calibrationLevelLeft+HB7CalibGain-HB7Gain;
+          calibrationGainRight = calibrationLevelRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
         end
         if ismember(headphones,headphonesOptions(1:2))
-          calibrationGainLeft = -calibrationLevelLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
-          calibrationGainRight = -calibrationLevelRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
+          calibrationGainLeft = calibrationLevelLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
+          calibrationGainRight = calibrationLevelRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
         end
         %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings (optionally)
         %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
@@ -1215,7 +1224,7 @@ YPos = YPos-(editHeight+YGap);
 
     noise = randn(1,power2N); %create random Gaussian noise in time domain
     fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); %transform noise into frequency domain, apply gain and transform back into time domain
-    
+%     fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
     if logical(AMod) %apply amplitude modulation
       modenv = sin(2*pi*AMod*sampleDuration*(0:power2N-1));
       fNoise = (1+modenv).*fNoise;    
