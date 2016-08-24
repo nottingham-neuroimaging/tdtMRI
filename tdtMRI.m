@@ -1226,7 +1226,7 @@ YPos = YPos-(editHeight+YGap);
 
     noise = randn(1,power2N); %create random Gaussian noise in time domain
     fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); %transform noise into frequency domain, apply gain and transform back into time domain
-%     fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
+    fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
     if logical(AMod) %apply amplitude modulation
       modenv = sin(2*pi*AMod*sampleDuration*(0:power2N-1));
       fNoise = (1+modenv).*fNoise;    
@@ -1429,10 +1429,10 @@ YPos = YPos-(editHeight+YGap);
   % ***** refreshParameters *****
   function refreshParameters
     %keep only the first nAddParams fields (the others will take the
-    %default value from the parametere function)
+    %default value from the parameter function)
     newParams = feval(parameterFunction);
-    fieldNames = fieldnames(params);
-    for iParams = 1:nAddParam
+    fieldNames = fieldnames(newParams);
+    for iParams = 1:min(nAddParam,length(fieldNames))
       newParams.(fieldNames{iParams}) = params.(fieldNames{iParams});
     end
     params=newParams;
