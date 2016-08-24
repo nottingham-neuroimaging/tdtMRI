@@ -813,12 +813,12 @@ YPos = YPos-(editHeight+YGap);
         calibrationGainLeft = - calibrationLevelLeft - 3; %corresponding level for a 1voltRMS noise
         calibrationGainRight = - calibrationLevelRight - 3; %corresponding level for a 1voltRMS noise
         if ismember(TDT,tdtOptions(1))
-          calibrationGainLeft = calibrationLevelLeft+HB7CalibGain-HB7Gain;
-          calibrationGainRight = calibrationLevelRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
+          calibrationGainLeft = calibrationGainLeft+HB7CalibGain-HB7Gain;
+          calibrationGainRight = calibrationGainRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
         end
         if ismember(headphones,headphonesOptions(1:2))
-          calibrationGainLeft = calibrationLevelLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
-          calibrationGainRight = calibrationLevelRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
+          calibrationGainLeft = calibrationGainLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
+          calibrationGainRight = calibrationGainRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
         end
         %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings (optionally)
         %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
