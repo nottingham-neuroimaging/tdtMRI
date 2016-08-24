@@ -519,7 +519,7 @@ YPos = YPos-(editHeight+YGap);
             parameterFunction = get(hParamsFunction,'String');
         end
         if ~isempty(parameterFunction)
-          updateParameters  %populate parameter edit controls
+          updateParameterControls  %populate parameter edit controls
           updateRunInfo     %update the run duration according to the new number of stimuli
         end
         
@@ -529,7 +529,7 @@ YPos = YPos-(editHeight+YGap);
         if ~isnumeric(parameterFunction)
           [dummy, parameterFunction]=fileparts(parameterFunction); %remove extension ?
           set(hParamsFunction,'String',parameterFunction); %put the function name in the edit window
-          updateParameters  %populate parameter edit controls
+          updateParameterControls  %populate parameter edit controls
           updateRunInfo     %update the run duration according to the new number of stimuli
         end   
 
@@ -560,6 +560,7 @@ YPos = YPos-(editHeight+YGap);
 
       case 'Parameter'
         params.(paramNames{option})=  eval(['[' str2mat(get(handleCaller,'String')) ']']);
+        refreshParameters
         updateRunInfo   %update the run duration according to the new parameters
       
       case('displaySounds')
@@ -859,6 +860,7 @@ YPos = YPos-(editHeight+YGap);
         end
         
         %write log file header
+        refreshParameters;
         logFile = fopen(sprintf('%s\\%s_%s_%s%02d.txt',pwd,participant,datestr(now,'yyyy-mm-dd_HH-MM-SS'),parameterFunction,currentRun),'wt');
         fprintf(logFile, 'Current date and time: \t %s \n',datestr(now));
         fprintf(logFile, 'Subject: \t \t %s \n', participant);
@@ -1424,8 +1426,20 @@ YPos = YPos-(editHeight+YGap);
     end
   end
 
-  % ***** updateParameters *****
-  function updateParameters
+  % ***** refreshParameters *****
+  function refreshParameters
+    %keep only the first nAddParams fields (the others will take the
+    %default value from the parametere function)
+    newParams = feval(parameterFunction);
+    fieldNames = fieldnames(params);
+    for iParams = 1:nAddParam
+      newParams.(fieldNames{iParams}) = params.(fieldNames{iParams});
+    end
+    params=newParams;
+  end
+
+  % ***** updateParameterControls *****
+  function updateParameterControls
     try
       params = feval(parameterFunction);   %get default parameters from function
     catch id
