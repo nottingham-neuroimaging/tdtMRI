@@ -6,12 +6,11 @@ switch(extension)
     ffts = csvread(filename,29,1);
     ffts = ffts(:,1:end-3); %remove last 3 columns corresponding to two different weighted averages and an empty column
 
-
-    tf.frequencies = (0:size(ffts,2)-1)*3.125; %assuming frequency resolution of 3.125 Hz, but should find a way to read from file (readcsv encounters an error)
+    tf.frequencies = (0:size(ffts,2)-1)*(20000/(size(ffts,2)-1)); % Frequency step size based on number of sample points
     tf.frequencies = tf.frequencies/1000; %convert to kHz
     tf.fft = mean(ffts(6:end,:));
-    tf.fft = conv(tf.fft,ones(1,20)/20,'same');
-    
+    tf.fft = conv(tf.fft,ones(1,20)/20,'same');    
+      
   case '.mat'  %transfer functions measured using Kemar microphone at BRAMS
     tf = load(filename);
     tf.frequencies = tf.frequencies/1000; %convert to kHz
