@@ -1,5 +1,4 @@
-function [params,stimulus] = corticalMagnification(params,StimTR,TR,ScanDuration)
-
+function [params,stimulus] = corticalMagnification(params,nRepeatsPerRun,stimTR,TR)
 % stimulus = struct array with fields:
 %frequency (kHz)
 %bandwidth
@@ -7,11 +6,8 @@ function [params,stimulus] = corticalMagnification(params,StimTR,TR,ScanDuration
 %duration (ms)
 %name
 %number
-% StimTR = 8
-TR= 7.5
-% TR = 2
-% TR= 1.5
-ScanDuration= 8
+
+% TR in milliseconds
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
 
@@ -21,9 +17,9 @@ end
 if fieldIsNotDefined(params,'level')
     params.level = 80;
 end
-if fieldIsNotDefined(params,'sparse')
-    params.sparse = 1;
-end
+% if fieldIsNotDefined(params,'sparse')
+%     params.sparse = 0;
+% end
 if fieldIsNotDefined(params,'lowFrequency')
     params.lowFrequency = .1;
 end
@@ -33,85 +29,63 @@ end
 if fieldIsNotDefined(params,'nFrequencies')
     params.nFrequencies = 32;
 end
-if fieldIsNotDefined(params,'nRepeats')
-%     if params.sparse == 1
-    params.nRepeats = round((ScanDuration*60/TR)/params.nFrequencies);
-%     else
-%     params.nRepeats = round((ScanDuration*60/TR)/params.nFrequencies)-1;    
-%     end% use nRepeatsPerRun instead
-end
 if fieldIsNotDefined(params,'nSilence')
     params.nSilence = 8;  %ratio of silent conditions to total number of conditions - 1/nSilence
 end
-if fieldIsNotDefined(params,'acqDur')
-    
-    if params.sparse == 1
-    params.acqDur = 2000;
-    %     params.acqDur = 1525;
-    else
-        params.acqDur = 0;
-    end
-    %     params.blockDur = 2000; % morse train duration - ms
-end
-if fieldIsNotDefined(params,'stimWindow')
-    params.stimWindow = (TR * 1000)-params.acqDur;
-    %     params.blockDur = 2000; % morse train duration - ms
-end
-% if fieldIsNotDefined(params,'nMorseTrain')
-%     params.nMorseTrain = 8; % number of beeps in train
-%         if params.sparse == 1
-%         params.nMorseTrain = params.nMorseTrain*4;
-%     end
-% end
-if fieldIsNotDefined(params,'MorseA')
-    params.MorseA = 50;
-end
-if fieldIsNotDefined(params,'MorseB')
-    params.MorseB = 200;
-end
-if fieldIsNotDefined(params,'nMorseA')
-    if TR == 1.5
-        params.nMorseA = 2;
-    elseif TR == 2
-         params.nMorseA = 3;
-    elseif TR == 7.5
-        params.nMorseA = 10;
-    end
-end
-if fieldIsNotDefined(params,'nMorseB')
-    if TR == 1.5
-        params.nMorseB = 4;
-    elseif TR == 2
-        params.nMorseB = 5;
-    elseif TR == 7.5
-        params.nMorseB = 16;
-    end
-end
-if fieldIsNotDefined(params,'intStimGap')
-    params.intStimGap = 50;
-end
-if fieldIsNotDefined(params,'blockDur')
-    params.blockDur = ((params.MorseA*params.nMorseA)+(params.MorseB*params.nMorseB)+ (params.intStimGap*((params.nMorseA +params.nMorseB)-1)));
-    %     params.blockDur = 2000; % morse train duration - ms
+if fieldIsNotDefined(params,'ScanDuration')
+    params.ScanDuration = 8; % scan duration in minutes plus silence
 end
 if fieldIsNotDefined(params,'bandwidthERB')
     params.bandwidthERB = 1;
 end
 
-if nargout==1
-    return;
-end
+    trSparseThreshold = 4000;
+    
+%     params.ScanDuration= 8; % scan duration in minutes plus silence
+    params.nRepeats = round(((params.ScanDuration*60)/(stimTR/1000))/params.nFrequencies);
+    if stimTR > trSparseThreshold
+        params.acqDur = 2000;
+        %     params.acqDur = 1525;
+    else
+        params.acqDur = 0;
+    end
+    params.stimWindow = TR-params.acqDur;
 
-% check = params.nMorseTrain - (params.nMorseA + params.nMorseB);
-% if check>0
-%     error('There are too many morse trains');
-% end
+    params.MorseA = 50;
+    params.MorseB = 200;
+
+    if TR == 1500
+        params.nMorseA = 2;
+    elseif TR == 2000
+        params.nMorseA = 3;
+    elseif TR == 7500
+        params.nMorseA = 10;
+    else
+        params.nMorseA = 3;
+    end
+
+    if TR == 1500
+        params.nMorseB = 4;
+    elseif TR == 2000
+        params.nMorseB = 5;
+    elseif TR == 7500
+        params.nMorseB = 16;
+    else
+        params.nMorseB = 5;
+    end
+
+    params.intStimGap = 50;
+
+    params.blockDur = ((params.MorseA*params.nMorseA)+(params.MorseB*params.nMorseB)+ (params.intStimGap*((params.nMorseA +params.nMorseB)-1)));
+
 check = params.stimWindow - params.blockDur;
 if check<0
     error('The stimulus block is longer than the TR');
 end
 params.nMorseTrain = params.nMorseA + params.nMorseB;
-
+if nargout==1
+    return;
+end
 allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
 lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
 highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/2);
@@ -125,7 +99,7 @@ c=0;
 
 % create frequency morse code trains
 for i=1:length(allFrequencies)
-    if params.sparse == 1
+    if TR > trSparseThreshold
         c=c+1;
         stimulus(c).frequency =  [NaN repmat([allFrequencies(i) NaN],1,params.nMorseTrain)];
         ix = randperm(length(allduration));
@@ -177,20 +151,27 @@ stimulus = [stimulus silence];
 
 optimiseRepeats = 1000;
 glmType = 'hrfModel';
-hrf = getCanonicalHRF(TR);
+hrf = getCanonicalHRF(TR/1000);
 eMax = 0;
+seqMax = [];
+sequenceMax_Opti = [];
+warning('off','MATLAB:nearlySingularMatrix');
+warning('off','MATLAB:singularMatrix');
 for i = 1:optimiseRepeats
-ix = randperm(length(stimulus));
-sequence= stimulus(ix);
-[e(i), sequence_Opti] = testDesignEfficiency([sequence.number],params.nFrequencies,glmType,hrf);
+    ix = randperm(length(stimulus));
+    sequence= stimulus(ix);
+    [e(i), sequence_Opti] = testDesignEfficiency([sequence.number],params.nFrequencies,glmType,hrf);
     % find max efficiency
     if e(i)>eMax
         eMax = e(i);
         seqMax = sequence_Opti;
         sequenceMax_Opti = sequence;
-    end         
+    end
 end
+warning('on','MATLAB:nearlySingularMatrix');
+warning('on','MATLAB:singularMatrix');
 %% Voxel duty cycle
+if ~isempty(sequenceMax_Opti)
 sigma = 6.8;
 voxelDutyCycle = voxelDutyCycle(seqMax,params.nFrequencies,sigma);
 
@@ -200,9 +181,8 @@ PACerb = 17; % TW of PAC voxels in ERB
 erbDif = mean(diff(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies)));
 % voxelDutyCycle = (PACerb /erbDif)*params.nRepeats/((params.nFrequencies * params.nRepeats) + (nSilenceGroups * params.nBlocks));
 
-runTime = (numel(stimulus) * TR)/60;
-
-
+runTime = (numel(stimulus) * TR/1000)/60;
+end
 % local functions
 function out = isNotDefined(name)
 out = evalin('caller',['~exist(''' name ''',''var'')|| isempty(''' name ''')']);
@@ -298,41 +278,41 @@ voxelDC = mean(sum(sequence .* gausMat,1));
 
 function [e, sequence_Opti] = testDesignEfficiency(source,nEvents,glmType,hrf)
 binSize = 1;
-            sequence_Opti = zeros(nEvents,length(source));
-            for n=1:nEvents
-                seq = find(source==n);
-                sequence_Opti(n,seq) = 1;
-            end
-    
-    loopLength = nEvents/binSize;
-    c = 1;
-    if binSize ==1
-        desMatBin_Opti = sequence_Opti;
-    else
-        for n = 1:loopLength
-            desMatBin_Opti(n,:) = sum(sequence_Opti(c:c+binSize-1,:),1);
-            c = c + binSize;
+sequence_Opti = zeros(nEvents,length(source));
+for n=1:nEvents
+    seq = find(source==n);
+    sequence_Opti(n,seq) = 1;
+end
+
+loopLength = nEvents/binSize;
+c = 1;
+if binSize ==1
+    desMatBin_Opti = sequence_Opti;
+else
+    for n = 1:loopLength
+        desMatBin_Opti(n,:) = sum(sequence_Opti(c:c+binSize-1,:),1);
+        c = c + binSize;
+    end
+    desMatBin_Opti(desMatBin_Opti>1) = 1;
+end
+
+switch(glmType)
+    case('hrfModel')
+        for n = 1:nEvents/binSize
+            desMat_Opti(n,:) = convolveModelResponseWithHRF(desMatBin_Opti(n,:),hrf);
         end
-        desMatBin_Opti(desMatBin_Opti>1) = 1;
-    end
-    
-    switch(glmType)
-        case('hrfModel')            
-            for n = 1:nEvents/binSize
-                desMat_Opti(n,:) = convolveModelResponseWithHRF(desMatBin_Opti(n,:),hrf);
-            end
-        case('revCorr')
-            desMat_Opti = desMatBin_Opti;
-            for j=1:Nh-1
-                desMat_Opti = [desMat_Opti;circshift(desMatBin_Opti,[0,j])];
-            end
-    end
-    desMat_Opti_e = desMat_Opti-repmat(mean(desMat_Opti,2),1,length(desMat_Opti));
-    e_RandOp = 1/trace(inv(desMat_Opti_e * desMat_Opti_e'));
-    e = 1/trace(inv(desMat_Opti_e * desMat_Opti_e'));
-    
-    SeqMeanRand = sequence_Opti-repmat(mean(sequence_Opti,2),1,length(sequence_Opti));
-    eSeqRand = 1/trace(inv(SeqMeanRand * SeqMeanRand'));
+    case('revCorr')
+        desMat_Opti = desMatBin_Opti;
+        for j=1:Nh-1
+            desMat_Opti = [desMat_Opti;circshift(desMatBin_Opti,[0,j])];
+        end
+end
+desMat_Opti_e = desMat_Opti-repmat(mean(desMat_Opti,2),1,length(desMat_Opti));
+e_RandOp = 1/trace(inv(desMat_Opti_e * desMat_Opti_e'));
+e = 1/trace(inv(desMat_Opti_e * desMat_Opti_e'));
+
+SeqMeanRand = sequence_Opti-repmat(mean(sequence_Opti,2),1,length(sequence_Opti));
+eSeqRand = 1/trace(inv(SeqMeanRand * SeqMeanRand'));
 
 
 %% Sequence duty cycle
