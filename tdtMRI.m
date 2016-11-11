@@ -114,7 +114,7 @@ function tdtMRI
   end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 8000;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
+  TR = 2000;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
   stimTR = 2000;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
   minTDTcycle = 7000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
                       % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
@@ -1228,7 +1228,7 @@ YPos = YPos-(editHeight+YGap);
 
     noise = randn(1,power2N); %create random Gaussian noise in time domain
     fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); %transform noise into frequency domain, apply gain and transform back into time domain
-    fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
+%     fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
     if logical(AMod) %apply amplitude modulation
       modenv = sin(2*pi*AMod*sampleDuration*(0:power2N-1));
       fNoise = (1+modenv).*fNoise;    
@@ -1444,7 +1444,7 @@ YPos = YPos-(editHeight+YGap);
   function refreshParameters
     %keep only the first nAddParams fields (the others will take the
     %default value from the parameter function)
-    newParams = feval(parameterFunction);
+    newParams = feval(parameterFunction,[],nRepeatsPerRun,stimTR,TR);
     fieldNames = fieldnames(newParams);
     for iParams = 1:min(nAddParam,length(fieldNames))
       newParams.(fieldNames{iParams}) = params.(fieldNames{iParams});
@@ -1455,7 +1455,7 @@ YPos = YPos-(editHeight+YGap);
   % ***** updateParameterControls *****
   function updateParameterControls
     try
-      params = feval(parameterFunction);   %get default parameters from function
+      params = feval(parameterFunction,[],nRepeatsPerRun,stimTR,TR);   %get default parameters from function
     catch id
       displayMessage({sprintf('There was an error evaluating function %s:',parameterFunction)})
       disp(id.message)
