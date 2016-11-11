@@ -97,9 +97,9 @@ function tdtMRI
   end
 
   tdtOptions = {'RP2-HB7','RM1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
-  TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
+  TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
   headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'None'};
-  headphones = headphonesOptions{5};
+  headphones = headphonesOptions{4};
   displaySounds = false;
   if isempty(which('spectrogram')) %if there is no processing toolbox, use the alternative spectrogram function
     spectrogramFunction = @spectrogram2;
@@ -807,8 +807,10 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             
           case 'None'
-            calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
-            calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
+%             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
+%             calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
+            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
             
         end
         calibrationGainLeft = - calibrationLevelLeft - 3; %corresponding level for a 1voltRMS noise
