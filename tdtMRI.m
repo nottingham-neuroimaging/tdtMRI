@@ -1300,16 +1300,28 @@ YPos = YPos-(editHeight+YGap);
     %longer than the previous 2 lines but it works for any resolution and
     %doens't require the original transfer function to be oversampled (by an
     %integer factor) relative to the desired fft)
+    
+    % threshold value - inverting the transfer function for large negative
+    % values results in a greater dynamic range than the system can handle.
+    threshold = -50;
     for i=1:2
-      insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
-      insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
-      
-%       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
-%       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
-%       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
 
-      noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
+        insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
+        insertsFFT(insertsFFT<threshold) = threshold;
+        insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
+        
+        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
+        %       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
+        %       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
+        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
+        %       subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
+        %       subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
+        
+        noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
+        
     end
+    
+    
   end
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RP2-related functions
   
