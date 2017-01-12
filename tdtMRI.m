@@ -155,6 +155,10 @@ function tdtMRI
   %To account for this, we compute the ratio of the energy within one critical band around 1kHz and the total energy for an
   %equally exciting noise (a noise that stimulates an auditory filter with the same energy)
   LEE = lcfLEE(2^18,1,sampleDuration); 
+  noiseTypeOptions ={'ERB', 'Ten'};
+  noiseType = noiseTypeOptions{1};
+  modelHearingLossOptions = {'none','sHFHL'};
+  modelHearingLoss = modelHearingLossOptions{1};
 
   params = [];              %structure that will contain the numerical parameters to the parameter function
   paramNames = [];          %names of these parameters
@@ -219,11 +223,11 @@ function tdtMRI
       'String','Number of epochs/run:');
   hEpochsPerRun = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
-    'Callback',{@mainCallback,'nEpochsPerRun'},...
+      'Callback',{@mainCallback,'nEpochsPerRun'},...
       'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(nRepeatsPerRun),...
       'Style','edit');
-
+  
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % TR (expected time between received scanner pulses
       'BackgroundColor',mGray,...                          % this is also the duration of the synthesized sound sequence)
@@ -232,11 +236,11 @@ function tdtMRI
       'String','TR (sec):');
   hTR = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
-    'Callback',{@mainCallback,'TR'},...
+      'Callback',{@mainCallback,'TR'},...
       'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 editHeight],...
       'String',num2str(TR/1000),...
       'Style','edit');
-
+  
   uicontrol('Parent',hMainFigure,...                       % min TR (minimum waiting time after receiving a scanner pulse
       'BackgroundColor',mGray,...                          % before the next pulse can be received)
       'Position',[XPos+Width+XGap YPos Width*2/3 editHeight],...
@@ -248,7 +252,7 @@ function tdtMRI
       'Position',[XPos+Width*5/3+XGap*3/2 YPos Width/3-XGap/2 editHeight],...
       'String',num2str(stimTR/1000),...
       'Style','edit');
-
+  
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
       'BackgroundColor',mGray,...
@@ -261,8 +265,35 @@ function tdtMRI
       'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(NLevel),...
       'Style','edit');
-
-YPos = YPos-(editHeight+YGap);
+  
+  YPos = YPos-YGap;
+  uicontrol('Parent',hMainFigure,...                     %Noise type dropdown menu
+      'BackgroundColor',mGray,...
+      'Position',[XPos YPos-editHeight Width/2 editHeight],...
+      'Style','text',...
+      'String','Noise Type:');
+  hNoiseType = uicontrol('Parent',hMainFigure,...
+      'Callback',{@mainCallback,'noiseType'},...
+      'Position',[XPos+(Width+XGap)/2 YPos-buttonHeight (Width-XGap)/2 buttonHeight], ...
+      'Style','popupmenu',...
+      'String',noiseTypeOptions, ...
+      'value',find(ismember(noiseTypeOptions,noiseType)));
+  
+  uicontrol('Parent',hMainFigure,...                       % Model hearing loss dropdown menu
+      'BackgroundColor',mGray,...
+      'Position',[XPos+Width+XGap YPos-editHeight Width/2 editHeight],...
+      'Style','text',...
+      'String','Model HL:');
+  hModelHearingLoss = uicontrol('Parent',hMainFigure,...
+      'Callback',{@mainCallback,'modelHearingLoss'},...
+      'Position',[XPos+(Width*1.5)+XGap*1.5 YPos-buttonHeight (Width-XGap)/2 buttonHeight], ...
+      'Style','popupmenu',...
+      'String',modelHearingLossOptions, ...
+      'value',find(ismember(modelHearingLossOptions,modelHearingLoss)));
+  YPos = YPos-editHeight;
+  
+  
+  YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       %AM frequency of background noise level
       'BackgroundColor',mGray,...
       'Position',[XPos YPos Width editHeight],...
@@ -274,7 +305,7 @@ YPos = YPos-(editHeight+YGap);
       'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(AMfrequency),...
       'Style','edit');
-
+  
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                      %Condition parameter file
       'BackgroundColor',mGray,...
@@ -841,6 +872,21 @@ YPos = YPos-(editHeight+YGap);
         end
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
+        
+            % add masking noise to simulate hearing loss
+    if strcmp(modelHearingLoss,'sHFHL') 
+        % create filter
+        % filter noise
+        % calculate masking level - determine difference between stim level and noise level
+%         NLevel
+        % apply gain to filtered noise to achieve masking of stimulus (this stage is still at normalised levels - take into account) 
+        %               When background noise has gain applied, the masking noise should be the right level
+        %               normalise target spl levels to get target ratio? background noise should be 1 and masking plus values?
+        % add to noise
+        
+%         fNoise = 
+    end 
+        
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
@@ -1212,6 +1258,9 @@ YPos = YPos-(editHeight+YGap);
       noise = noise(:,(power2N-evenN)/2+(1:N)); %keep central portion
     end
   end
+
+  % ********** lcffilterFNoise **********
+  fNoise = lcffilterFNoise(fNoise,N,F,Nlevel,level)
   
   % ********** lcfMakeFNoise **********
   function fNoise = lcfMakeNoise(N,sampleDuration,AMod)
@@ -1236,6 +1285,12 @@ YPos = YPos-(editHeight+YGap);
     
     fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
     
+    
+    % change masking noise to Threshold Equalising Noise
+    if strcmp(noiseType,'TEN')
+        
+    end 
+           
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
       fNoise = applyInverseTransfer(fNoise);
     end
