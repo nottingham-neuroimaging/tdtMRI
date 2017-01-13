@@ -154,11 +154,13 @@ function tdtMRI
   %that stimulates one auditory (cochlear) filter and not the sound level of the total noise (at all frequencies)
   %To account for this, we compute the ratio of the energy within one critical band around 1kHz and the total energy for an
   %equally exciting noise (a noise that stimulates an auditory filter with the same energy)
-  LEE = lcfLEE(2^18,1,sampleDuration); 
+  LEE = lcfLEE(2^18,1,sampleDuration);
+  
+  maskingNLevel = 80;
   noiseTypeOptions ={'ERB', 'Ten'};
   noiseType = noiseTypeOptions{1};
-  modelHearingLossOptions = {'none','sHFHL'};
-  modelHearingLoss = modelHearingLossOptions{1};
+  maskingNoiseOptions = {'none','sHFHL'};
+  maskingNoiseType = maskingNoiseOptions{1};
 
   params = [];              %structure that will contain the numerical parameters to the parameter function
   paramNames = [];          %names of these parameters
@@ -253,17 +255,42 @@ function tdtMRI
       'String',num2str(stimTR/1000),...
       'Style','edit');
   
+%   YPos = YPos-(editHeight+YGap);
+%   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
+%       'BackgroundColor',mGray,...
+%       'Position',[XPos YPos Width editHeight],...
+%       'Style','text',...
+%       'String','Noise Level (dB):');
+%   hNLevel = uicontrol('Parent',hMainFigure, ...
+%       'BackgroundColor',[1 1 1],...
+%       'Callback',{@mainCallback,'noiseLevel'},...
+%       'Position',[XPos+Width+XGap YPos Width editHeight],...
+%       'String',num2str(NLevel),...
+%       'Style','edit');
+  
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
-      'BackgroundColor',mGray,...
-      'Position',[XPos YPos Width editHeight],...
+      'BackgroundColor',mGray,...                          
+      'Position',[XPos YPos Width/2 editHeight],...
       'Style','text',...
       'String','Noise Level (dB):');
   hNLevel = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'noiseLevel'},...
-      'Position',[XPos+Width+XGap YPos Width editHeight],...
+      'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 editHeight],...
       'String',num2str(NLevel),...
+      'Style','edit');
+  
+  uicontrol('Parent',hMainFigure,...                       % masking Noise Level
+      'BackgroundColor',mGray,...                          
+      'Position',[XPos+Width+XGap YPos Width*2/3 editHeight],...
+      'Style','text',...
+      'String','Masking Level (dB):');
+  hMaskingNLevel = uicontrol('Parent',hMainFigure, ...
+      'BackgroundColor',[1 1 1],...
+      'Callback',{@mainCallback,'maskingNoiseLevel'},...
+      'Position',[XPos+Width*5/3+XGap*3/2 YPos Width/3-XGap/2 editHeight],...
+      'String',num2str(maskingNLevel),...
       'Style','edit');
   
   YPos = YPos-YGap;
@@ -284,12 +311,12 @@ function tdtMRI
       'Position',[XPos+Width+XGap YPos-editHeight Width/2 editHeight],...
       'Style','text',...
       'String','Model HL:');
-  hModelHearingLoss = uicontrol('Parent',hMainFigure,...
-      'Callback',{@mainCallback,'modelHearingLoss'},...
+  hMaskingType = uicontrol('Parent',hMainFigure,...
+      'Callback',{@mainCallback,'maskingNoise'},...
       'Position',[XPos+(Width*1.5)+XGap*1.5 YPos-buttonHeight (Width-XGap)/2 buttonHeight], ...
       'Style','popupmenu',...
-      'String',modelHearingLossOptions, ...
-      'value',find(ismember(modelHearingLossOptions,modelHearingLoss)));
+      'String',maskingNoiseOptions, ...
+      'value',find(ismember(maskingNoiseOptions,maskingNoiseType)));
   YPos = YPos-editHeight;
   
   
@@ -585,7 +612,16 @@ function tdtMRI
         
       case('noiseLevel')
         NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
-
+        
+      case('maskingNoiseLevel')
+        maskingNLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
+      
+      case('noiseType')
+        noiseType=noiseTypeOptions{get(handleCaller,'Value')};
+        
+      case('maskingNoise')
+        maskingNoiseType=maskingNoiseOptions{get(handleCaller,'Value')};
+        
       case('AMfrequency')
         AMfrequency=eval(get(handleCaller,'String')); % 
 
@@ -781,6 +817,9 @@ function tdtMRI
         set(hTR,'Enable','off')
         set(hStimTR,'Enable','off')
         set(hNLevel,'Enable','off')
+        set(hMaskingNLevel,'Enable','off')
+        set(hNoiseType,'Enable','off')
+        set(hMaskingType,'Enable','off')
         set(hAMfrequency,'Enable','off')
         set(hParams(1:usedAddParams),'Enable','off')
         %enable simulated trigger and stop run buttons
@@ -873,19 +912,31 @@ function tdtMRI
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
         
-            % add masking noise to simulate hearing loss
-    if strcmp(modelHearingLoss,'sHFHL') 
-        % create filter
-        % filter noise
-        % calculate masking level - determine difference between stim level and noise level
-%         NLevel
-        % apply gain to filtered noise to achieve masking of stimulus (this stage is still at normalised levels - take into account) 
-        %               When background noise has gain applied, the masking noise should be the right level
-        %               normalise target spl levels to get target ratio? background noise should be 1 and masking plus values?
-        % add to noise
-        
-%         fNoise = 
-    end 
+        % add masking noise to simulate hearing loss
+        if strcmp(maskingNoiseType,'sHFHL')
+            % create filter
+            % filter noise
+            % calculate masking level - determine difference between stim level and noise level
+            %         NLevel
+            % apply gain to filtered noise to achieve masking of stimulus (this stage is still at normalised levels - take into account)
+            %               When background noise has gain applied, the masking noise should be the right level
+            %               normalise target spl levels to get target ratio? background noise should be 1 and masking plus values?
+            % add to noise
+            
+            %         fNoise =
+%             maskingNlevel = 80;
+            maskingGain =  (maskingNLevel - NLevel) /maskingNLevel;
+            mNoise = lcfmakeMaskingNoise(noiseBufferSize,sampleDuration,2,3);
+            fNoise = fNoise +(mNoise.*maskingGain);
+            fNoiseTest = fNoise +(mNoise.*maskingGain);
+            
+
+        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
+        %       subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
+               figure;plot(0:noiseBufferSize-1,abs(fft(fNoise(1,:))));
+               figure;plot(0:noiseBufferSize-1,abs(fft(mNoise(1,:))));
+               figure;plot(0:noiseBufferSize-1,abs(fft(fNoiseTest(1,:))));
+        end
         
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
@@ -952,6 +1003,9 @@ function tdtMRI
         set(hTR,'Enable','on')
         set(hStimTR,'Enable','on')
         set(hNLevel,'Enable','on')
+        set(hMaskingNLevel,'Enable','on')
+        set(hNoiseType,'Enable','on')
+        set(hMaskingType,'Enable','on')
         set(hAMfrequency,'Enable','on')
         set(hParams(1:usedAddParams),'Enable','on')
         set(hStartRun,'Enable','on')
@@ -1259,9 +1313,43 @@ function tdtMRI
     end
   end
 
-  % ********** lcffilterFNoise **********
-  fNoise = lcffilterFNoise(fNoise,N,F,Nlevel,level)
-  
+  % ********** lcfmakeMaskingFNoise **********
+    function mNoise = lcfmakeMaskingNoise(N,sampleDuration,F1,F2)
+      evenN = N+mod(N,2); %make N even
+      power2N = 2^ceil(log2(evenN)); %find next larger power of 2
+      DF = 1/(sampleDuration*power2N);
+      hp = zeros(1,power2N/2);
+      
+    frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
+    lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
+    
+    % change masking noise to Threshold Equalising Noise
+    if strcmp(noiseType,'TEN')
+        %        lev = ??
+    end
+    
+    eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
+    % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
+    % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
+    % or to the square root of the bandwidth when expressed as pressure 
+
+    noise = randn(1,power2N); %create random Gaussian noise in time domain
+    fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); 
+
+            
+      hp(round(F1/DF):round(F2/DF)) = [0 log(linspace(exp(0),exp(1),round(F2/DF)-round(F1/DF)))]; %create bandpass-filtered noise F1 > F > F2 
+      hp(round(F2/DF):end) = 1;
+%       noise=lcfMakeNoise(N,sampleDuration,0);
+      mNoise = real(ifft([hp fliplr(hp)].*fft(fNoise)));
+      mNoise = repmat(mNoise/sqrt(mean(mNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
+      
+      if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
+          fNoise = applyInverseTransfer(fNoise);
+      end
+      
+      mNoise = mNoise(:,(power2N-evenN)/2+(1:N)); %keep central portion
+
+    end
   % ********** lcfMakeFNoise **********
   function fNoise = lcfMakeNoise(N,sampleDuration,AMod)
     %synthesizes an equally-exciting noise (which stimulates auditory filters with constant energy at any frequency, that is
@@ -1270,6 +1358,12 @@ function tdtMRI
     DF = 1/(sampleDuration*power2N);
     frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
     lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
+    
+        % change masking noise to Threshold Equalising Noise
+    if strcmp(noiseType,'TEN')
+%        lev = ?? 
+    end 
+           
     eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
     % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
     % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
@@ -1283,14 +1377,8 @@ function tdtMRI
       fNoise = (1+modenv).*fNoise;    
     end
     
-    fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
-    
-    
-    % change masking noise to Threshold Equalising Noise
-    if strcmp(noiseType,'TEN')
-        
-    end 
-           
+    fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels  
+
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
       fNoise = applyInverseTransfer(fNoise);
     end
