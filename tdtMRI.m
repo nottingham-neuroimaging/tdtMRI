@@ -927,7 +927,7 @@ function tdtMRI
 %             maskingNlevel = 80;
             maskingGain =  (maskingNLevel - NLevel) /maskingNLevel;
             mNoise = lcfmakeMaskingNoise(noiseBufferSize,sampleDuration,2,3);
-            fNoise = fNoise +(mNoise.*maskingGain);
+%             fNoise = fNoise +(mNoise.*maskingGain);
             fNoiseTest = fNoise +(mNoise.*maskingGain);
             
 
