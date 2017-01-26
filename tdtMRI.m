@@ -150,7 +150,7 @@ function tdtMRI
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
                                   % (i.e. a signal is just detectable in a noise level that's about 5.9 dB louder)
                                   % this will be subtracted to the desired noise level (instead of adding it to the signal)
-  SNR1dB = 0;                                 
+%   SNR1dB = 0;                                 
   %For the background noise, there is a twist because the intended sound level concerns the portion of the spectrum
   %that stimulates one auditory (cochlear) filter and not the sound level of the total noise (at all frequencies)
   %To account for this, we compute the ratio of the energy within one critical band around 1kHz and the total energy for an
@@ -586,8 +586,8 @@ function tdtMRI
         plotSignal(zeros(1,nStimTRs*signalSize()));
         
       case('noiseLevel')
-        NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
-        
+%         NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
+        NLevel=eval(get(handleCaller,'String')); % removed -SNR1B because CR is now taken into account in the lcfMakeNoise ---> lcfSetNoiseLevel
       case('CriticalRatio')
         CriticalRatio=CriticalRatioOptions{get(handleCaller,'Value')};
         
@@ -889,16 +889,20 @@ function tdtMRI
           scaling = maxVoltage*0.9/max(max(fNoise));
           %write background noise to TDT
           invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
-          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
-          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
+%           invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
+%           invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
+          invoke(RP2,'SetTagVal','NAmpL',10^((calibrationGainLeft-LEE)/20)/scaling); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+          invoke(RP2,'SetTagVal','NAmpR',10^((calibrationGainRight-LEE)/20)/scaling); %set the Nom noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
           invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
         elseif ismember(TDT,tdtOptions(4))
           % 2016-06-07 mod by Jaakko, play noise in the background with audiocard
           durationSec = getNumberTRs()*TR/1000; 
           fNoiseLong=repmat(fNoise,1,1+ceil(durationSec/(size(fNoise,2)/24414.0625))); % noise 11-22s longer than actual stimulation due to ceil(), should be ok
-          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE)/20);
-          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE)/20);
+%           fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE)/20);
+%           fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE)/20);
+          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((calibrationGainLeft-LEE)/20); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((calibrationGainRight-LEE)/20); %set the Nom noise level
           noisePlayer = audioplayer(fNoiseLong,24414.0625); 
           play(noisePlayer);
         end
@@ -914,7 +918,8 @@ function tdtMRI
           fprintf(logFile, '  %s = %s%s \n',paramNames{iParams},repmat(' ',1,maxParamNameLength-length(paramNames{iParams})),num2str(params.(paramNames{iParams})));
         end
         fprintf(logFile, '\nDynamic scan duration (ms): \t %d \n', TR);
-        fprintf(logFile, 'Noise Level: \t %d dB (%.3f dB SPL)\n', NLevel, NLevel-SNR1dB);
+%         fprintf(logFile, 'Noise Level: \t %d dB (%.3f dB SPL)\n', NLevel, NLevel-SNR1dB);
+        fprintf(logFile, 'Noise Level: \t %d dB (CR = %s)\n', NLevel,CriticalRatio); % State the Critical Ratio calculation used. Can either be a constant (Zwicker), like before or vary as a function of frequency (Hawkins).
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcond.\tfreq.(kHz)\tlevel(dB)\tbandwidth(kHz)\tduration(ms)\tname\tapproximate time (MM:SS)\n');
 
