@@ -145,22 +145,22 @@ function tdtMRI
   
   AMfrequency = 0; % default amplitude modulation frequency(0 = no modulation)
   NLevel = 35;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
-  SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
+%   SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
                                   % a signal is just detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
                                   % (i.e. a signal is just detectable in a noise level that's about 5.9 dB louder)
                                   % this will be subtracted to the desired noise level (instead of adding it to the signal)
+  SNR1dB = 0;                                 
   %For the background noise, there is a twist because the intended sound level concerns the portion of the spectrum
   %that stimulates one auditory (cochlear) filter and not the sound level of the total noise (at all frequencies)
   %To account for this, we compute the ratio of the energy within one critical band around 1kHz and the total energy for an
   %equally exciting noise (a noise that stimulates an auditory filter with the same energy)
   LEE = lcfLEE(2^18,1,sampleDuration);
   
-  maskingNLevel = 80;
-  noiseTypeOptions ={'ERB', 'Ten'};
-  noiseType = noiseTypeOptions{1};
-  maskingNoiseOptions = {'none','sHFHL'};
-  maskingNoiseType = maskingNoiseOptions{1};
+  CriticalRatioOptions ={'Zwicker', 'Hawkins'};
+  CriticalRatio = CriticalRatioOptions{1};
+  hearingLossSimulationOptions = {'none','sHFHL'};
+  hearingLossSimulation = hearingLossSimulationOptions{1};
 
   params = [];              %structure that will contain the numerical parameters to the parameter function
   paramNames = [];          %names of these parameters
@@ -255,68 +255,43 @@ function tdtMRI
       'String',num2str(stimTR/1000),...
       'Style','edit');
   
-%   YPos = YPos-(editHeight+YGap);
-%   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
-%       'BackgroundColor',mGray,...
-%       'Position',[XPos YPos Width editHeight],...
-%       'Style','text',...
-%       'String','Noise Level (dB):');
-%   hNLevel = uicontrol('Parent',hMainFigure, ...
-%       'BackgroundColor',[1 1 1],...
-%       'Callback',{@mainCallback,'noiseLevel'},...
-%       'Position',[XPos+Width+XGap YPos Width editHeight],...
-%       'String',num2str(NLevel),...
-%       'Style','edit');
-  
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % Background Noise Level
-      'BackgroundColor',mGray,...                          
-      'Position',[XPos YPos Width/2 editHeight],...
+      'BackgroundColor',mGray,...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','Noise Level (dB):');
   hNLevel = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'noiseLevel'},...
-      'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 editHeight],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(NLevel),...
       'Style','edit');
-  
-  uicontrol('Parent',hMainFigure,...                       % masking Noise Level
-      'BackgroundColor',mGray,...                          
-      'Position',[XPos+Width+XGap YPos Width*2/3 editHeight],...
-      'Style','text',...
-      'String','Masking Level (dB):');
-  hMaskingNLevel = uicontrol('Parent',hMainFigure, ...
-      'BackgroundColor',[1 1 1],...
-      'Callback',{@mainCallback,'maskingNoiseLevel'},...
-      'Position',[XPos+Width*5/3+XGap*3/2 YPos Width/3-XGap/2 editHeight],...
-      'String',num2str(maskingNLevel),...
-      'Style','edit');
-  
+    
   YPos = YPos-YGap;
-  uicontrol('Parent',hMainFigure,...                     %Noise type dropdown menu
+  uicontrol('Parent',hMainFigure,...                     %Critical Ratio dropdown menu
       'BackgroundColor',mGray,...
       'Position',[XPos YPos-editHeight Width/2 editHeight],...
       'Style','text',...
-      'String','Noise Type:');
-  hNoiseType = uicontrol('Parent',hMainFigure,...
-      'Callback',{@mainCallback,'noiseType'},...
+      'String','Critical Ratio:');
+  hCriticalRatioValues = uicontrol('Parent',hMainFigure,...
+      'Callback',{@mainCallback,'CriticalRatio'},...
       'Position',[XPos+(Width+XGap)/2 YPos-buttonHeight (Width-XGap)/2 buttonHeight], ...
       'Style','popupmenu',...
-      'String',noiseTypeOptions, ...
-      'value',find(ismember(noiseTypeOptions,noiseType)));
+      'String',CriticalRatioOptions, ...
+      'value',find(ismember(CriticalRatioOptions,CriticalRatio)));
   
-  uicontrol('Parent',hMainFigure,...                       % Model hearing loss dropdown menu
+  uicontrol('Parent',hMainFigure,...                       % Hearing loss simulation dropdown menu
       'BackgroundColor',mGray,...
       'Position',[XPos+Width+XGap YPos-editHeight Width/2 editHeight],...
       'Style','text',...
-      'String','Model HL:');
-  hMaskingType = uicontrol('Parent',hMainFigure,...
-      'Callback',{@mainCallback,'maskingNoise'},...
+      'String','HL Sim:');
+  hhearingLossSimulation = uicontrol('Parent',hMainFigure,...
+      'Callback',{@mainCallback,'hearingLossSimulation'},...
       'Position',[XPos+(Width*1.5)+XGap*1.5 YPos-buttonHeight (Width-XGap)/2 buttonHeight], ...
       'Style','popupmenu',...
-      'String',maskingNoiseOptions, ...
-      'value',find(ismember(maskingNoiseOptions,maskingNoiseType)));
+      'String',hearingLossSimulationOptions, ...
+      'value',find(ismember(hearingLossSimulationOptions,hearingLossSimulation)));
   YPos = YPos-editHeight;
   
   
@@ -613,14 +588,11 @@ function tdtMRI
       case('noiseLevel')
         NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
         
-      case('maskingNoiseLevel')
-        maskingNLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
-      
-      case('noiseType')
-        noiseType=noiseTypeOptions{get(handleCaller,'Value')};
+      case('CriticalRatio')
+        CriticalRatio=CriticalRatioOptions{get(handleCaller,'Value')};
         
-      case('maskingNoise')
-        maskingNoiseType=maskingNoiseOptions{get(handleCaller,'Value')};
+      case('hearingLossSimulation')
+        hearingLossSimulation=hearingLossSimulationOptions{get(handleCaller,'Value')};
         
       case('AMfrequency')
         AMfrequency=eval(get(handleCaller,'String')); % 
@@ -817,9 +789,8 @@ function tdtMRI
         set(hTR,'Enable','off')
         set(hStimTR,'Enable','off')
         set(hNLevel,'Enable','off')
-        set(hMaskingNLevel,'Enable','off')
-        set(hNoiseType,'Enable','off')
-        set(hMaskingType,'Enable','off')
+        set(hCriticalRatioValues,'Enable','off')
+        set(hhearingLossSimulation,'Enable','off')
         set(hAMfrequency,'Enable','off')
         set(hParams(1:usedAddParams),'Enable','off')
         %enable simulated trigger and stop run buttons
@@ -911,33 +882,7 @@ function tdtMRI
         end
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
-        
-        % add masking noise to simulate hearing loss
-        if strcmp(maskingNoiseType,'sHFHL')
-            % create filter
-            % filter noise
-            % calculate masking level - determine difference between stim level and noise level
-            %         NLevel
-            % apply gain to filtered noise to achieve masking of stimulus (this stage is still at normalised levels - take into account)
-            %               When background noise has gain applied, the masking noise should be the right level
-            %               normalise target spl levels to get target ratio? background noise should be 1 and masking plus values?
-            % add to noise
-            
-            %         fNoise =
-%             maskingNlevel = 80;
-            maskingGain =  (maskingNLevel - NLevel) /maskingNLevel;
-            mNoise = lcfmakeMaskingNoise(noiseBufferSize,sampleDuration,2,3);
-%             fNoise = fNoise +(mNoise.*maskingGain);
-            fNoiseTest = fNoise +(mNoise.*maskingGain);
-            
-
-        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
-        %       subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
-               figure;plot(0:noiseBufferSize-1,abs(fft(fNoise(1,:))));
-               figure;plot(0:noiseBufferSize-1,abs(fft(mNoise(1,:))));
-               figure;plot(0:noiseBufferSize-1,abs(fft(fNoiseTest(1,:))));
-        end
-        
+               
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
@@ -1003,9 +948,8 @@ function tdtMRI
         set(hTR,'Enable','on')
         set(hStimTR,'Enable','on')
         set(hNLevel,'Enable','on')
-        set(hMaskingNLevel,'Enable','on')
-        set(hNoiseType,'Enable','on')
-        set(hMaskingType,'Enable','on')
+        set(hCriticalRatioValues,'Enable','on')
+        set(hhearingLossSimulation,'Enable','on')
         set(hAMfrequency,'Enable','on')
         set(hParams(1:usedAddParams),'Enable','on')
         set(hStartRun,'Enable','on')
@@ -1313,43 +1257,6 @@ function tdtMRI
     end
   end
 
-  % ********** lcfmakeMaskingFNoise **********
-    function mNoise = lcfmakeMaskingNoise(N,sampleDuration,F1,F2)
-      evenN = N+mod(N,2); %make N even
-      power2N = 2^ceil(log2(evenN)); %find next larger power of 2
-      DF = 1/(sampleDuration*power2N);
-      hp = zeros(1,power2N/2);
-      
-    frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
-    lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
-    
-    % change masking noise to Threshold Equalising Noise
-    if strcmp(noiseType,'TEN')
-        %        lev = ??
-    end
-    
-    eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
-    % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
-    % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
-    % or to the square root of the bandwidth when expressed as pressure 
-
-    noise = randn(1,power2N); %create random Gaussian noise in time domain
-    fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); 
-
-            
-      hp(round(F1/DF):round(F2/DF)) = [0 log(linspace(exp(0),exp(1),round(F2/DF)-round(F1/DF)))]; %create bandpass-filtered noise F1 > F > F2 
-      hp(round(F2/DF):end) = 1;
-%       noise=lcfMakeNoise(N,sampleDuration,0);
-      mNoise = real(ifft([hp fliplr(hp)].*fft(fNoise)));
-      mNoise = repmat(mNoise/sqrt(mean(mNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
-      
-      if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
-          fNoise = applyInverseTransfer(fNoise);
-      end
-      
-      mNoise = mNoise(:,(power2N-evenN)/2+(1:N)); %keep central portion
-
-    end
   % ********** lcfMakeFNoise **********
   function fNoise = lcfMakeNoise(N,sampleDuration,AMod)
     %synthesizes an equally-exciting noise (which stimulates auditory filters with constant energy at any frequency, that is
@@ -1358,12 +1265,7 @@ function tdtMRI
     DF = 1/(sampleDuration*power2N);
     frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
     lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
-    
-        % change masking noise to Threshold Equalising Noise
-    if strcmp(noiseType,'TEN')
-%        lev = ?? 
-    end 
-           
+     
     eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
     % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
     % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
@@ -1377,8 +1279,15 @@ function tdtMRI
       fNoise = (1+modenv).*fNoise;    
     end
     
-    fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels  
-
+%     fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels  
+    fNoise = fNoise/sqrt(mean(fNoise.^2));  %normalize amplitude to rms=1
+    
+    %% if this is right, change duplication for left right channels to after this and HL simulation
+    
+    fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation);
+        
+    fNoise = repmat(fNoise,2,1);  % duplicate for left and right channels  
+    
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
       fNoise = applyInverseTransfer(fNoise);
     end
@@ -1420,7 +1329,7 @@ function tdtMRI
     f = 1/4.37*(10^(nerb/21.4)-1);
   end
 
-  % ***** lcfInvNErb *****
+% ***** checkSignalLevel *****
   function hClipWarning = checkSignalLevel(signal,hClipWarning)
     if max(max(signal))>maxVoltage
       %find which TDT attenuation setting would solve the problem
@@ -1448,7 +1357,7 @@ function tdtMRI
     
     % threshold value - inverting the transfer function for large negative
     % values results in a greater dynamic range than the system can handle.
-    threshold = -50;
+    threshold = -50; % remove this and optimise the output level based on headphone nom level
     for i=1:2
 
         insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
@@ -1458,16 +1367,231 @@ function tdtMRI
         %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
         %       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
         %       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
-        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
-        %       subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
-        %       subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
+              figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
+              subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
+              subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
         
         noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
         
     end
-    
-    
   end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% Set fNoise Level %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation)
+    
+    % change masking noise to Threshold Equalising Noise using Critical Ratios from Hawkins and Stevens 1950
+    if strcmp(CriticalRatio,'Zwicker')
+        CriticalRatioFFT = 10*log10(10^(1/10)-1)*ones(size(frq));
+    elseif strcmp(CriticalRatio,'Hawkins')
+        CriticalRatioFFT = getCriticalRatioPerERB(frq*1000);
+    end
+
+    thresholdBaseline = NLevel; %% change to baseline threshold
+    thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
+
+    if strcmp(hearingLossSimulation,'sHFHL')
+        thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
+        levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
+    elseif strcmp(hearingLossSimulation,'None')
+        levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
+    end      
+
+    
+    lev = -10*log10(lcfErb(frq));
+    lev = lev/sqrt(mean(lev.^2));
+    
+    levelFFT = [levelFFT fliplr(levelFFT)];
+    
+    N = length(levelFFT)/2;
+    noiseFFT = abs(fft(fNoise));
+    
+    figure
+    plot(0:N-1,lev)
+    hold on
+    plot(0:N-1,thresholdBaselineFFT)
+    plot(0:N-1,CriticalRatioFFT)
+        if strcmp(hearingLossSimulation,'sHFHL')
+        plot((0:N-1),thresholdHearingLossFFT(1:N))
+    end
+    plot(0:N-1,levelFFT(1:N))
+    legend('lev',...
+        'thresholdBaselineFFT',...
+        'CriticalRatioFFT',...
+        'thresholdHearingLossFFT',...
+        'levelFFT',...
+        'Location','best')
+
+  
+    figure;subplot(3,1,1);plot((0:N-1),noiseFFT(1:N));
+    subplot(3,1,2);plot((0:N-1),levelFFT(1:N));
+    subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
+    
+    fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); % 10.^(CriticalRatioFFT/20); %convert to amplification/attenuation coefficient
+end
+
+function CriticalRatioPerERB_int = getCriticalRatioPerERB(f)
+
+% f = 10.^(linspace(log10(20),log10(20000),100));
+CriticalRatioPerERB_int = zeros(1,length(f));
+
+[CriticalRatio_int CriticalRatioMeasured f_measured_hz] = getCriticalRatio_HawkinsAndStevens1950(f);
+ERB = lcfErb(f_measured_hz/1000);
+
+CriticalRatioPerERB = CriticalRatioMeasured-10*log10(ERB);
+CriticalRatio_Zwicker = 10*log10(10^(1/10)-1)*ones(size(f_measured_hz));
+
+fit_extrapolate_100HzMinus = polyfit(f_measured_hz(1:4),CriticalRatioPerERB(1:4),1);
+fit_extrapolate_9kHzPlus = polyfit(f_measured_hz(12:end),CriticalRatioPerERB(12:end),1);
+
+CriticalRatioPerERB_int(f<100) = max(CriticalRatioPerERB(1),polyval(fit_extrapolate_100HzMinus,f(f<100)));
+CriticalRatioPerERB_int(f>=100 & f<=9000) = interp1(f_measured_hz,CriticalRatioPerERB,f(f>=100 & f<=9000),'spline');
+CriticalRatioPerERB_int(f>9000) = max(CriticalRatioPerERB(end),polyval(fit_extrapolate_9kHzPlus,f(f>9000)));
+
+% figure; 
+% plot(f_measured_hz,CriticalRatioPerERB,'ko-');
+% hold on
+% plot(f,CriticalRatioPerERB_int,'r--')
+% legend('Critical Ratio (Measured)',...
+%     'Critical Ratio (Extrapolated)',...
+%     'Location','best')
+% set(gca,'XLim',[min(f) max(f)])
+% title('Critical Ratio Per ERB)')
+% xlabel('Frequency (Hz)') 
+% ylabel('dB')
+end
+
+function [CriticalRatio_int CriticalRatioMeasured f_measured_hz] = getCriticalRatio_HawkinsAndStevens1950(f)
+%
+%   usage: getCriticalRatio_HawkinsAndStevens1950
+%      by: Ben Gurer
+%    date: 19/01/2017
+% purpose: output the critical ratio values as determined by Hawkins And Stevens (1950)
+% 
+% discription:
+% Measured values taken from Hawkins And Stevens (1950) The masking of pure tones and of speech by white noise (fig. 6)
+% "Ratio between the monaural masked threshold of a pure tone and the level per cycle of the masking noise measured at the frequency of the pure tone".
+
+CriticalRatio_int = zeros(1,length(f));
+
+f_measured_hz = [100, 125, 175, 250, 350, 500, 700, 1000, 1400, 2000, 2800, 4000, 5600, 7000, 8000, 9000];
+CriticalRatioMeasured = [19, 17.75, 17.5, 16.25, 16.5 17.25, 17.75, 18.5, 19.25, 20.5, 22.5, 25, 25.5, 26.75, 27, 28.5];
+% CriticalRatioInt = interp1(f_measured_hz,CriticalRatio,f,'spline');
+
+% f_extrapolate_100HzMinus = linspace(20,100,10);
+% f_extrapolate_9kHzPlus = linspace(9000,20000,10); 
+fit_extrapolate_100HzMinus = polyfit(f_measured_hz(1:4),CriticalRatioMeasured(1:4),1);
+fit_extrapolate_9kHzPlus = polyfit(f_measured_hz(12:end),CriticalRatioMeasured(12:end),1);
+
+CriticalRatio_int(f<100) = max(CriticalRatioMeasured(1),polyval(fit_extrapolate_100HzMinus,f(f<100)));
+CriticalRatio_int(f>=100 & f<=9000) = interp1(f_measured_hz,CriticalRatioMeasured,f(f>=100 & f<=9000),'spline');
+CriticalRatio_int(f>9000) = max(CriticalRatioMeasured(end),polyval(fit_extrapolate_9kHzPlus,f(f>9000)));
+
+
+% figure; 
+% plot(f_measured_hz,CriticalRatioMeasured,'ko-');
+% hold on
+% plot(f,CriticalRatio_int,'r--')
+% legend('Critical Ratio (Measured)',...
+%     'Critical Ratio (Extrapolated)',...
+%     'Location','best')
+% set(gca,'XLim',[min(f) max(f)])
+% title('Critical Ratio - Hawkins And Stevens (1950)')
+% xlabel('Frequency (kHz)') 
+% ylabel('dB')
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%Simulating Hearing Loss functions %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ********** lcfSimulateHearingLoss **********
+    function Threshold_dBSPL_FFT = lcfSimulateHearingLoss(frq)
+                
+        %% Create hearing loss simulation masking noise
+        % This masking noise aims to simualte hearing loss by raising the threshold of auditory perception.
+        
+        Threshold_dBHL = createSteeplySlopingHearingLoss_dBHL(frq);
+        
+        RETSPL_int = getdBHLinSPL_inserts(frq*1000);
+        
+        Threshold_dBSPL_FFT = Threshold_dBHL + RETSPL_int;
+                       
+    end
+    function RETSPL_int = getdBHLinSPL_inserts(f)
+        %
+        %   usage: getdBHLinSPL_inserts(f)
+        %      by: Ben Gurer
+        %    date: 19/01/2017
+        % purpose: output the dB Hearling Level values in dB Sound Pressure Level for insert transducers for frequencies specified using the input arguement
+        %
+        % discription:
+        % interpolates the dB HL values for input arguements of frequency from value specified by ISO 389.
+        
+        % BS EN ISO 389-2:1997
+        % Acoustics - Reference zero for the calibration of audiometric equipment — Part 2: Reference equivalent threshold sound
+        % pressure levels for pure tones and insert earphones.
+        % Transducer: Etymotic Research ER-3A
+        % Ear simulator: Occluded-ear simulator (IEC 711)
+        RETSPL_int = zeros(1,length(f));
+        
+        RETSPL_125_8000Hz = [28.0, 24.5 21.5, 17.5, 15.5, 13.0, 9.5, 7.5, 6.0, 5.5, 5.5, 8.5, 9.5, 9.5, 11.5, 13.5, 13.0, 13.0, 15.0, 18.5, 16.0, 16.0, 15.5];
+        
+        f_hz_measured_125_8000Hz = [125, 160, 200, 250, 315, 400, 500, 630, 750, 800, 1000, 1250, 1500, 1600, 2000, 2500, 3000, 3150, 4000, 5000, 6000, 6300, 8000];
+        
+        % Acoustics - Reference zero for the calibration of audiometric equipment - Part 5: Reference equivalent threshold sound
+        % pressure levels for pure tones in the frequency range 8 kHz to 16 kHz (ISO 389-5:2006)
+        % Transducer: Etymotic Research ER-2b
+        % Ear simulator: IEC 60711e
+        % Adapter: ISO 389-2:1994
+        
+        f_hz_measured_8000_16000Hz =[8000, 9000, 10000, 11200, 12500, 14000, 16000];
+        
+        RETSPL_8000_1600Hz = [19, 16, 20, 30.5, 37, 43.5, 53];
+        
+        % f = linspace(20,20000,20);
+        
+%         figure
+%         plot(f_hz_measured_125_8000Hz,RETSPL_125_8000Hz,'ko-')
+%         hold on
+%         plot(f_hz_measured_8000_16000Hz,RETSPL_8000_1600Hz,'ko-')
+        
+        RETSPL_int = interp1([f_hz_measured_125_8000Hz f_hz_measured_8000_16000Hz(2:end)],[RETSPL_125_8000Hz RETSPL_8000_1600Hz(2:end)],f,'spline');
+%         plot(f,RETSPL_int,'r--')
+        
+%         legend('Threshold - 125 - 8000 Hz',...
+%             'Threshold - 8000 - 16000Hz',...
+%             'Threshold - Interpolated',...
+%             'Location','best')
+%         set(gca,'XLim',[min(f) max(f)])
+%         title('Threshold of Hearing - Inserts')
+%         xlabel('Frequency (kHz)')
+%         ylabel('dB (SPL)')
+    end
+
+    function Threshold_dBHL = createSteeplySlopingHearingLoss_dBHL(f)
+        
+        Slope = 36.5; % dB/oct
+        F_HearingLoss_lower = 3;
+        F_HearingLoss_upper = 8;
+        
+        Threshold_HL = max(Slope*log2(f/F_HearingLoss_lower),0);
+        Threshold_HL_upper = Threshold_HL(find(f>=F_HearingLoss_upper,1,'first'));
+        
+        Threshold_dBHL = min(Threshold_HL,Threshold_HL_upper);
+        
+%         figure
+%         plot(f,Threshold_dBHL,'r--')
+%         set(gca,'XLim',[min(f) max(f)])
+%         title('Steeply sloping hearig loss according to screening crtiterion')
+%         xlabel('Frequency (kHz)')
+%         ylabel('dB (HL)')
+    end
+
+
+
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RP2-related functions
   
   % ***** testRP2 *****
