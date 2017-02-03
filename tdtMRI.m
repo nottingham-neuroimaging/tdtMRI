@@ -638,8 +638,105 @@ function tdtMRI
       case('SyncTR')
         syncTR = 1000*eval(get(handleCaller,'String'));
         
-      case('StartCircuit')    
+      case('StartCircuit') 
+         
 
+          %% The selection of headphones is now applied at the callback which starts the TDT circuit.
+          % This allows the program to determine the HB7 gain level based on the max stimulus level and the Nominal level of the headphones.          
+          % Stimulus level at output from headphone driver, is not the same as the output level from the headphones themself because of the transfer function of the transducer.
+          
+                  %compute the gain to apply to background noise and sounds
+        switch headphones
+          case 'NNL Inserts' %(assumes that these earphones are driven with the TDT RP2+HB7)
+            calibrationLevel = 65.5;  % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the inserts with the above calibration settings (TDT output = -27dB and NNL output = 6)
+            calibrationLevelLeft  = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
+            calibrationLevelRight = 72.0; % calibration 04/03/2016 right side
+            transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts (seems to correspond to right side)
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFileLeft = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
+            
+          case 'NNL Headphones' %(assumes that these earphones are driven with the TDT RP2+HB7)
+%             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
+%                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
+            calibrationLevel = 82.3; % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the NNL headphones with the above calibration settings
+            calibrationLevelLeft  = 83.2; % calibration 04/03/2016 left side
+            calibrationLevelRight = 84.4; % calibration 04/03/2016 right side
+            transferFunctionFile = 'HD_clicks_752avg_8V.csv';  %csv file containing the impulse reponse of the headphones
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFileLeft = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
+            
+          case 'Sennheiser HD 212Pro' %(assumes that these earphones are driven with the TDT RP2+HB7)
+%             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
+%                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
+%                                     % correcting for differences in amplitudes of the impulse)
+            calibrationLevel = 84.3; % calibration level estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
+            calibrationLevelLeft  = 77.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 81.6; % calibration 04/03/2016 right side
+            transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
+            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
+            transferFunctionFileLeft = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
+            
+          case 'Sensimetrics S14' %(assumes that these earphones are driven with the TDT RP2+HB7)
+            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
+            transferFunctionFileLeft = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_396insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            transferFunctionFileRight = 'S14_396insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
+            
+          case 'S14 BRAMS (335)' %(assumes that these earphones are driven with the TDT RM1)
+            calibrationLevelLeft = 101.0; % calibration 17/06/2016 left side with RM1  
+            calibrationLevelRight = 101.6; % calibration 17/06/2016 right side with RM1
+            transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
+            transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
+            
+          case 'None'
+%             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
+%             calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
+            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
+            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
+            
+        end
+        calibrationGainLeft = - calibrationLevelLeft - 3; %corresponding level for a 1voltRMS noise
+        calibrationGainRight = - calibrationLevelRight - 3; %corresponding level for a 1voltRMS noise
+        
+        %% moved to bebfore setting HB7 gain - need to know transfer function to set level
+        if ~strcmp(headphones,'None')
+%           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
+          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft]);
+          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight]);
+        end
+        if ismember(TDT,tdtOptions(1,3))            
+            %% TAG - DETERMINE HB7 gain HERE
+            % this is to develop tdt hb7 gain setting code
+            HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight);
+            displayMessage({sprintf('==> Set TDT HB7 gain to %.0f dB!',HB7Gain)});
+          
+          calibrationGainLeft = calibrationGainLeft+HB7CalibGain-HB7Gain;
+          calibrationGainRight = calibrationGainRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the
+        end
+        if ismember(headphones,headphonesOptions(1:2))
+          calibrationGainLeft = calibrationGainLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
+          calibrationGainRight = calibrationGainRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
+        end
+        %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings (optionally)
+        %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
+        %with peak amplitude 1V (rms=1/sqrt(2)) results in a 65.5dB SPL sound level. Therefore an arbitrary signal with rms=1V would result in
+        %a 68.5 dB SPL level (*sqrt(2) <-> +3dB)
+        %Therefore, to present a 1Vrms signal at 70 dB SPL with the same attenuation/amplification settings as during calibration,
+        %the signal would have to be amplified by 70 - 68.5 = 1.5 dB.
+        %However, if the attenuation/amplification settings change (say HB7Gain = -24dB and NNLGain = -6.2dB), the signal would have
+        %to be amplified (attenuated) by 70 - 68.5 + HB7CalibGain + NNLCalibGain - HB7Gain - NNLGain = 70-68.5-27+0+24+6.2 = 4.7 dB
+        % (= 70 + calibrationGain) in order to result in the same output level of 70 dB SPL.
+        
+        %load insert transfer inverse filter parameters
+
+          
         if ismember(TDT,tdtOptions(1:2))
           displayMessage({'Creating TDT ActiveX interface...'})
           HActX = figure('position',[0.2*ScreenPos(3)/100 (75+2.25)*ScreenPos(4)/100 (100-0.4)*ScreenPos(3)/100 (25-4.3)*ScreenPos(4)/100],...
@@ -671,9 +768,6 @@ function tdtMRI
           else
             displayMessage({'TDT circuit loaded and running!'})
           end
-          if isequal(TDT,tdtOptions{1})
-            displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB!',HB7Gain)});
-          end
           if isequal(TDT,tdtOptions{2})
             displayMessage({'==> Make sure TDT RM1 gain is set to MAXIMUM!'});
           end
@@ -691,7 +785,11 @@ function tdtMRI
               return
           end
           signalBufferMaxSize = invoke(RP2,'GetTagVal','SignalBufSize'); % this is the signal buffer size at circuit compilation
-          noiseBufferSize = invoke(RP2,'GetTagVal','NoiseBufSize');   %get the noise buffer size                
+          noiseBufferSize = invoke(RP2,'GetTagVal','NoiseBufSize');   %get the noise buffer size     
+          if isequal(TDT,tdtOptions{1})
+%             HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight);                
+            displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB!',HB7Gain)});
+          end
         else
           displayMessage({'Not using TDT'});
           noiseBufferSize=261900;
@@ -797,92 +895,34 @@ function tdtMRI
         set(hStopRun,'Enable','on')
         set(hSimulatedTrigger,'Enable','on')
         
-        %compute the gain to apply to background noise and sounds
-        switch headphones
-          case 'NNL Inserts' %(assumes that these earphones are driven with the TDT RP2+HB7)
-            calibrationLevel = 65.5;  % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the inserts with the above calibration settings (TDT output = -27dB and NNL output = 6)
-            calibrationLevelLeft  = 80.9; % calibration 04/03/2016 left side (varies quite a lot depending on how the earplug is inserted in the coupler)
-            calibrationLevelRight = 72.0; % calibration 04/03/2016 right side
-            transferFunctionFile = 'clicks_596avg_8V.csv';  %csv file containing the impulse reponse of the NNL inserts (seems to correspond to right side)
-            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFileLeft = 'NNLinsertsLeftFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'NNLinsertsRightFFT.csv';  %csv file containing the impulse reponse of the NNL insert earphones (measured on 08/03/2016)
-            
-          case 'NNL Headphones' %(assumes that these earphones are driven with the TDT RP2+HB7)
-%             calibrationLevel = 81.4; % estimated level for the same noise using NNL headphones 
-%                                      % (estimated from difference between NNL inserts and headphones transfer functions at 1kHz)
-            calibrationLevel = 82.3; % level (in dB SPL) of a 1Volt 1kHz sinewave recorded at the NNL headphones with the above calibration settings
-            calibrationLevelLeft  = 83.2; % calibration 04/03/2016 left side
-            calibrationLevelRight = 84.4; % calibration 04/03/2016 right side
-            transferFunctionFile = 'HD_clicks_752avg_8V.csv';  %csv file containing the impulse reponse of the headphones
-            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFileLeft = 'NNLheadphonesLeftFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'NNLheadphonesRightFFT.csv';  %csv file containing the impulse reponse of the NNL headphones (measured on 08/03/2016)
-            
-          case 'Sennheiser HD 212Pro' %(assumes that these earphones are driven with the TDT RP2+HB7)
-%             calibrationLevel = 100; % estimated level for the same noise using Sennheiser HD 212Pro directly plugged to the TDT HB7 driver
-%                                     %(estimated from difference between NNL inserts and Senheiser headphones transfer functions at 1kHz
-%                                     % correcting for differences in amplitudes of the impulse)
-            calibrationLevel = 84.3; % calibration level estimated by hear so that the level of these headphones roughly match those of the NNL headphones/inserts
-            calibrationLevelLeft  = 77.4; % calibration 04/03/2016 left side
-            calibrationLevelRight = 81.6; % calibration 04/03/2016 right side
-            transferFunctionFile = 'click_50003pts.mat';  %csv file containing the impulse reponse of the Sennheiser headphones
-            %new frequency transfer measurements to be read using loadTransferFunction.m instead of loadInsertsTransfer.m previously
-            transferFunctionFileLeft = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
-            
-          case 'Sensimetrics S14' %(assumes that these earphones are driven with the TDT RP2+HB7)
-            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
-            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
-            transferFunctionFileLeft = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            transferFunctionFileRight = 'EQF_396R.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
-            transferFunctionFileLeft = 'S14_396insertsLeftFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-            transferFunctionFileRight = 'S14_396insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
-            
-          case 'S14 BRAMS (335)' %(assumes that these earphones are driven with the TDT RM1)
-            calibrationLevelLeft = 101.0; % calibration 17/06/2016 left side with RM1  
-            calibrationLevelRight = 101.6; % calibration 17/06/2016 right side with RM1
-            transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
-            transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
-            transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
-            transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
-            
-          case 'None'
-%             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
-%             calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
-            calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
-            calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
-            
-        end
-        calibrationGainLeft = - calibrationLevelLeft - 3; %corresponding level for a 1voltRMS noise
-        calibrationGainRight = - calibrationLevelRight - 3; %corresponding level for a 1voltRMS noise
-        if ismember(TDT,tdtOptions(1))
-          calibrationGainLeft = calibrationGainLeft+HB7CalibGain-HB7Gain;
-          calibrationGainRight = calibrationGainRight+HB7CalibGain-HB7Gain; % correction factor (in dB) to apply to the 
-        end
-        if ismember(headphones,headphonesOptions(1:2))
-          calibrationGainLeft = calibrationGainLeft+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); 
-          calibrationGainRight = calibrationGainRight+NNLGain(NNLCalibSetting)-NNLGain(NNLsetting); % correction factor (in dB) to apply to the 
-        end
-        %the intended sound level so that it actually results in the corresponding sound level, given the HB7 and NNL settings (optionally)
-        %Explanation: with calibration settings of HB7CalibGain=-27dB and NNLGain=0dB, it was recorded that a 1 kHz sinewave
-        %with peak amplitude 1V (rms=1/sqrt(2)) results in a 65.5dB SPL sound level. Therefore an arbitrary signal with rms=1V would result in
-        %a 68.5 dB SPL level (*sqrt(2) <-> +3dB)
-        %Therefore, to present a 1Vrms signal at 70 dB SPL with the same attenuation/amplification settings as during calibration,
-        %the signal would have to be amplified by 70 - 68.5 = 1.5 dB.
-        %However, if the attenuation/amplification settings change (say HB7Gain = -24dB and NNLGain = -6.2dB), the signal would have
-        %to be amplified (attenuated) by 70 - 68.5 + HB7CalibGain + NNLCalibGain - HB7Gain - NNLGain = 70-68.5-27+0+24+6.2 = 4.7 dB
-        % (= 70 + calibrationGain) in order to result in the same output level of 70 dB SPL.
+       
+        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise 
         
-        %load insert transfer inverse filter parameters
-        if ~strcmp(headphones,'None')
-%           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
-          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft]);
-          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight]);
-        end
+        %% check max level and stop if going to clip tdt or headphones
+        hClipWarning=[];
+%         for i = 1:size(fNoise,1)
+        NoiseLeftVRMS = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft-LEE)/20)).^2))
+        NoiseRightVRMS = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight-LEE)/20)).^2))
         
-        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
-               
+        NoiseLeftVPeak = max(max((fNoise(1,:)*10^((calibrationGainLeft-LEE)/20))))
+        NoiseRightVPeak = max(max((fNoise(2,:)*10^((calibrationGainRight-LEE)/20))))
+        
+%         NoiseLeftVdiff = NoiseLeftVPeak - NoiseLeftVRMS
+%         NoiseRightVdiff = NoiseRightVPeak - NoiseRightVRMS
+        
+        NoiseLeftdBRMS = 20*log10(NoiseLeftVRMS)
+        NoiseRightdBRMS = 20*log10(NoiseRightVRMS)
+
+        NoiseLeftdBPeak = 20*log10(NoiseLeftVPeak)
+        NoiseRightdBPeak = 20*log10(NoiseRightVPeak)
+        
+        NoiseLeftdBcrestRatio = NoiseLeftdBPeak - NoiseLeftdBRMS
+        NoiseRightdBcrestRatio = NoiseRightdBPeak -NoiseRightdBRMS
+
+        hClipWarning = checkSignalLevel(fNoise(1,:)*10^((calibrationGainLeft-LEE)/20),hClipWarning);        
+        hClipWarning = checkSignalLevel(fNoise(2,:)*10^((calibrationGainRight-LEE)/20),hClipWarning);
+%         end
+        
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
@@ -1211,7 +1251,18 @@ function tdtMRI
     
     AMod = AMfrequency/1000; %Amplitude modulation
     if isinf(BW)    %if bandwidth is infinite, make an equally-exciting noise
-      noise=lcfMakeNoise(N,sampleDuration,AMod);
+%       noise=lcfMakeNoise(N,sampleDuration,AMod);
+      noise = randn(1,N);
+      if logical(AMod) %apply amplitude modulation
+        modenv = sin(2*pi*AMod*sampleDuration*(0:N-1));
+        noise = (1+modenv).*noise;    
+      end
+      noise = repmat(noise/sqrt(mean(noise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels
+      
+      if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
+        noise = applyInverseTransfer(noise);
+      end
+      
     elseif BW==0    %if bandwith=0, make a pure tone
       noise = sin(2*pi*FSig*sampleDuration*(0:N-1));
       if logical(AMod) %apply amplitude modulation
@@ -1288,9 +1339,9 @@ function tdtMRI
     fNoise = fNoise/sqrt(mean(fNoise.^2));  %normalize amplitude to rms=1
     
     %% if this is right, change duplication for left right channels to after this and HL simulation
-    
+  
     fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation);
-        
+ 
     fNoise = repmat(fNoise,2,1);  % duplicate for left and right channels  
     
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
@@ -1331,7 +1382,7 @@ function tdtMRI
 
   % ***** lcfInvNErb *****
   function f = lcfInvNErb(nerb)
-    f = 1/4.37*(10^(nerb/21.4)-1);
+    f = 1/4.37*(10.^(nerb/21.4)-1);
   end
 
 % ***** checkSignalLevel *****
@@ -1348,6 +1399,126 @@ function tdtMRI
       end
     end
   end
+
+%   function hClipWarning = checkNoiseLevel(signal,hClipWarning)
+%       tdtVoltage = zeros(1,size(signal,1));
+%       transducerVoltage = zeros(1,size(signal,1));
+%       for i = 1:size(signal,1)
+%           tdtVoltage(i) = max(max(signal(i,:)*10^((calibrationGainLeft-LEE)/20)));
+%           transducerVoltage(i) = max(max(signal(i,:)*10^((calibrationGainLeft-LEE+HB7Gain)/20)));
+%       end
+%       
+%       if max(tdtVoltage)>maxVoltage
+%           %find which TDT attenuation setting would solve the problem
+%           newHB7Gain = HB7Gain + 3*ceil(20*(log10(max(tdtVoltage)/maxVoltage))/3);
+%           hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!! (' mat2str(max(tdtVoltage)) ')'],...
+%               ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
+%               'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
+%           NEWtransducerVoltage =  max(max(signal(i,:)*10^((calibrationGainLeft-LEE+newHB7Gain)/20)));
+%       else
+%           if ishandle(hClipWarning)
+%               delete(hClipWarning);
+%           end
+%       end    
+%            
+%   end
+
+    function HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight)
+
+        N = 261900;
+        power2N = 2^ceil(log2(N)); %find next larger power of 2
+        DF = 1/(sampleDuration*power2N);
+        frq = DF*(1:power2N/2);
+        
+        NomLevelLeft = - calibrationLevelLeft - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
+        NomLevelRight = - calibrationLevelRight - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
+                        
+        % change masking noise to Threshold Equalising Noise using Critical Ratios from Hawkins and Stevens 1950
+        if strcmp(CriticalRatio,'Zwicker')
+            CriticalRatioFFT = 10*log10(10^(1/10)-1)*ones(size(frq));
+        elseif strcmp(CriticalRatio,'Hawkins')
+            CriticalRatioFFT = getCriticalRatioPerERB(frq*1000);
+        end
+
+        thresholdBaseline = NLevel; %% change to baseline threshold
+        thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
+        
+%         threshold = 70;
+        if strcmp(hearingLossSimulation,'sHFHL')
+            thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
+            % or find what value at 8 kHz is
+            % thresholdHearingLossFFT(thresholdHearingLossFFT<threshold) = threshold;
+            levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
+            % levelFFT(levelFFT>threshold) = threshold;
+        elseif strcmp(hearingLossSimulation,'none')
+            thresholdHearingLossFFT = zeros(1,length(frq));
+            levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
+        end
+        
+        lev = -10*log10(lcfErb(frq));
+        NF = lcfNErb(1);
+        F1 = lcfInvNErb(NF-0.5);
+        F2 = lcfInvNErb(NF+0.5);
+        ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB
+   
+        if isfield(transferFunction,'frequencies')
+        for i = 1:length(transferFunction)
+            headphoneTransferFunction(i,:) = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
+            %             fftTotal(i,:) = ee_1kHz + levelFFT - headphoneTransferFunction(i,:);
+            fftTotal(i,:) = ee_1ERB + levelFFT - headphoneTransferFunction(i,:);
+            IntensityTotal(i) = sum(10.^(fftTotal(i,:)/10))/length(fftTotal(i,:)); % *2/(2*N)
+            levelTotaldB(i) = 10*log10(IntensityTotal(i));
+            
+            if isfield(params,'nFrequencies')
+                % check if frequencies
+                allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
+                allFrequenciesLevels(i,:) = params.level - (interp1(transferFunction(i).frequencies,transferFunction(i).fft,allFrequencies,'spline'));
+                stimuliMaxLevel(i) = max(allFrequenciesLevels(i,:));
+            else
+                stimuliFFT(i,:) = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
+                StimuliIntensityTotal(i) = sum(10.^(stimuliFFT(i,:)/10))/length(stimuliFFT(i,:)); % *2/(2*N)
+                stimuliMaxLevel(i) = StimuliIntensityTotal(i) + params.level;
+            end
+        end
+        else
+            fftTotal = ee_1ERB + levelFFT;
+            IntensityTotal = sum(10.^(fftTotal/10))/length(fftTotal); % *2/(2*N)
+            levelTotaldB = 10*log10(IntensityTotal);
+            stimuliMaxLevel = params.level;            
+        end    
+        levelTotaldB = levelTotaldB + 14; % add 14 dB headroom to account for peaks
+        MaxLevel = max([levelTotaldB stimuliMaxLevel]);
+        NomLevel = max(NomLevelLeft,NomLevelRight);
+        HB7Gain =  MaxLevel + NomLevel;
+        HB7Gain = min(max(ceil(HB7Gain/3)*3,-27),0);
+        
+        if isfield(transferFunction,'frequencies')
+        figure
+        markers = {'bo','ro'};
+        for i = 1:length(transferFunction)
+%             subplot(2,1,1)
+            plot(frq,fftTotal(i,:))
+            hold on
+%             subplot(2,1,2)
+            if isfield(params,'nFrequencies')
+                for ii = 1:length(allFrequencies)
+                    plot(allFrequencies(ii),allFrequenciesLevels(i,ii),markers{i})
+                    hold on
+                end
+                hold on
+            else
+                plot(frq,stimuliFFT(i,:))
+                hold on
+            end
+        end
+        legend('Masking Noise - Left',...
+            'Masking Noise - Right',...
+            'Stimuli - Left',...
+            'Stimuli - Right',...
+            'Location','best')
+        text(8,60,['Max Level = ' mat2str(MaxLevel)]);
+        end       
+    end
 
   % ***** applyInverseTransfer
   function noise = applyInverseTransfer(noise)
@@ -1372,9 +1543,9 @@ function tdtMRI
         %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
         %       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
         %       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
-              figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
-              subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
-              subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
+%               figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
+%               subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
+%               subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
         
         noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
         
@@ -1397,44 +1568,69 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
     thresholdBaseline = NLevel; %% change to baseline threshold
     thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
 
+%     threshold = 70;
     if strcmp(hearingLossSimulation,'sHFHL')
         thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
+        % or find what value at 8 kHz is
+%         thresholdHearingLossFFT(thresholdHearingLossFFT<threshold) = threshold;
         levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
-    elseif strcmp(hearingLossSimulation,'None')
+%         levelFFT(levelFFT>threshold) = threshold;        
+    elseif strcmp(hearingLossSimulation,'none')
+        thresholdHearingLossFFT = zeros(1,length(frq));
         levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
     end      
-
+   
+%     lev = -10*log10(lcfErb(frq));
+%     ee_1kHz = lev - (interp1(frq,lev,1));
+%     tf = plotTransferFunction_S14;
     
-    lev = -10*log10(lcfErb(frq));
-    lev = lev/sqrt(mean(lev.^2));
-    
+%     headphoneTransferFunction = interp1(tf(1).frequencies,tf(1).fft,frq,'spline');
+%     fftTotal = ee_1kHz + levelFFT - headphoneTransferFunction;
+%     IntensityTotal = sum(10.^(fftTotal/10))/length(fftTotal); % *2/(2*N)
+%     levelTotaldB = 10*log10(IntensityTotal);
+%     
+%     allFrequencies = lcfInvNErb(linspace(lcfNErb(0.1),lcfNErb(8),32)); 
+%    
+%     stimuliLevels = 80 - (interp1(tf(1).frequencies,tf(1).fft,allFrequencies,'spline'));
+%          
     levelFFT = [levelFFT fliplr(levelFFT)];
     
-    N = length(levelFFT)/2;
-    noiseFFT = abs(fft(fNoise));
+%     N = length(levelFFT)/2;
+%     noiseFFT = abs(fft(fNoise));
     
-    figure
-    plot(0:N-1,lev)
-    hold on
-    plot(0:N-1,thresholdBaselineFFT)
-    plot(0:N-1,CriticalRatioFFT)
-        if strcmp(hearingLossSimulation,'sHFHL')
-        plot((0:N-1),thresholdHearingLossFFT(1:N))
-    end
-    plot(0:N-1,levelFFT(1:N))
-    legend('lev',...
-        'thresholdBaselineFFT',...
-        'CriticalRatioFFT',...
-        'thresholdHearingLossFFT',...
-        'levelFFT',...
-        'Location','best')
-
+%     figure
+%     plot(frq,ee_1kHz)
+%     hold on
+%     plot(frq,thresholdBaselineFFT)
+%     plot(frq,CriticalRatioFFT)
+%         if strcmp(hearingLossSimulation,'sHFHL')
+%         plot((frq),thresholdHearingLossFFT(1:N))
+%     end
+%     plot(frq,levelFFT(1:N))
+%     plot(frq,headphoneTransferFunction)
+%     plot(frq,fftTotal,'LineWidth',2)
+% 
+%         plot(allFrequencies,stimuliLevels,'ko')
+%     xlim([min(frq) max(frq)])
+%     xlabel('Frequency (kHz)')
+%     ylabel('dB SPL')
+%     legend('lev',...
+%         'thresholdBaselineFFT',...
+%         'CriticalRatioFFT',...
+%         'thresholdHearingLossFFT',...
+%         'levelFFT',...
+%         'headphoneTransferFunction',...
+%         'totalLevelFFT',...
+%         'Stimuli Levels',...
+%         'Location','best')
+%     text(8,60,mat2str(levelTotaldB))
   
-    figure;subplot(3,1,1);plot((0:N-1),noiseFFT(1:N));
-    subplot(3,1,2);plot((0:N-1),levelFFT(1:N));
-    subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
+%     figure;subplot(3,1,1);plot((0:N-1),noiseFFT(1:N));
+%     subplot(3,1,2);plot((0:N-1),levelFFT(1:N));
+%     subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
     
-    fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); % 10.^(CriticalRatioFFT/20); %convert to amplification/attenuation coefficient
+    fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); % 10.^(CriticalRatioFFT/20); %convert to amplification/attenuation coefficient   
+    
 end
 
 function CriticalRatioPerERB_int = getCriticalRatioPerERB(f)
