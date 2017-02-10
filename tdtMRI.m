@@ -711,7 +711,7 @@ function tdtMRI
           transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft]);
           transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight]);
         end
-        if ismember(TDT,tdtOptions(1,3))            
+        if ismember(TDT,tdtOptions(1)) || ismember(TDT,tdtOptions(3))          
             %% TAG - DETERMINE HB7 gain HERE
             % this is to develop tdt hb7 gain setting code
             HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight);
@@ -900,29 +900,13 @@ function tdtMRI
         
         %% check max level and stop if going to clip tdt or headphones
         hClipWarning=[];
-%         for i = 1:size(fNoise,1)
-        NoiseLeftVRMS = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft-LEE)/20)).^2))
-        NoiseRightVRMS = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight-LEE)/20)).^2))
-        
-        NoiseLeftVPeak = max(max((fNoise(1,:)*10^((calibrationGainLeft-LEE)/20))))
-        NoiseRightVPeak = max(max((fNoise(2,:)*10^((calibrationGainRight-LEE)/20))))
-        
-%         NoiseLeftVdiff = NoiseLeftVPeak - NoiseLeftVRMS
-%         NoiseRightVdiff = NoiseRightVPeak - NoiseRightVRMS
-        
-        NoiseLeftdBRMS = 20*log10(NoiseLeftVRMS)
-        NoiseRightdBRMS = 20*log10(NoiseRightVRMS)
 
-        NoiseLeftdBPeak = 20*log10(NoiseLeftVPeak)
-        NoiseRightdBPeak = 20*log10(NoiseRightVPeak)
-        
-        NoiseLeftdBcrestRatio = NoiseLeftdBPeak - NoiseLeftdBRMS
-        NoiseRightdBcrestRatio = NoiseRightdBPeak -NoiseRightdBRMS
+%         printVoltage(fNoise(1,:)*10^((calibrationGainLeft)/20))
+%         printVoltage(fNoise(2,:)*10^((calibrationGainLeft)/20))
+        printVoltage(fNoise)
+        hClipWarning = checkSignalLevel(fNoise(1,:)*10^((calibrationGainLeft)/20),hClipWarning);        
+        hClipWarning = checkSignalLevel(fNoise(2,:)*10^((calibrationGainRight)/20),hClipWarning);
 
-        hClipWarning = checkSignalLevel(fNoise(1,:)*10^((calibrationGainLeft-LEE)/20),hClipWarning);        
-        hClipWarning = checkSignalLevel(fNoise(2,:)*10^((calibrationGainRight-LEE)/20),hClipWarning);
-%         end
-        
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
@@ -931,8 +915,10 @@ function tdtMRI
           invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
 %           invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
 %           invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
-          invoke(RP2,'SetTagVal','NAmpL',10^((calibrationGainLeft-LEE)/20)/scaling); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
-          invoke(RP2,'SetTagVal','NAmpR',10^((calibrationGainRight-LEE)/20)/scaling); %set the Nom noise level
+%           invoke(RP2,'SetTagVal','NAmpL',10^((calibrationGainLeft-LEE)/20)/scaling); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+%           invoke(RP2,'SetTagVal','NAmpR',10^((calibrationGainRight-LEE)/20)/scaling); %set the Nom noise level
+          invoke(RP2,'SetTagVal','NAmpL',10^((calibrationGainLeft)/20)/scaling); %set the Nom noise level - the level and EE normalisation is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+          invoke(RP2,'SetTagVal','NAmpR',10^((calibrationGainRight)/20)/scaling); %set the Nom noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
           invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
         elseif ismember(TDT,tdtOptions(4))
@@ -941,8 +927,10 @@ function tdtMRI
           fNoiseLong=repmat(fNoise,1,1+ceil(durationSec/(size(fNoise,2)/24414.0625))); % noise 11-22s longer than actual stimulation due to ceil(), should be ok
 %           fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE)/20);
 %           fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE)/20);
-          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((calibrationGainLeft-LEE)/20); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
-          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((calibrationGainRight-LEE)/20); %set the Nom noise level
+%           fNoiseLong(1,:)=fNoiseLong(1,:)*10^((calibrationGainLeft-LEE)/20); %set the Nom noise level - the level is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+%           fNoiseLong(2,:)=fNoiseLong(2,:)*10^((calibrationGainRight-LEE)/20); %set the Nom noise level
+          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((calibrationGainLeft)/20); %set the Nom noise level - the level and EE normalisation is now set in the creation of the noise, lcfMakeNoise ----> lcfSetNoiseLevel
+          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((calibrationGainRight)/20); %set the Nom noise level
           noisePlayer = audioplayer(fNoiseLong,24414.0625); 
           play(noisePlayer);
         end
@@ -1093,6 +1081,7 @@ function tdtMRI
         end
       end
       hClipWarning = checkSignalLevel(signal,hClipWarning);
+      printVoltage(signal);
       
       thisSyncTR=round(syncTR+(rand(1)-0.5)*10); %add random value to sync TR
 %     thisSyncTR=round(syncTR+rand(1)*1000));          
@@ -1318,18 +1307,24 @@ function tdtMRI
     %synthesizes an equally-exciting noise (which stimulates auditory filters with constant energy at any frequency, that is
     %which compensates for the increasing critical bandwidth of the cochlear filters with increasing frequency)
     power2N = 2^ceil(log2(N)); %find next larger power of 2
+    power2N = N
     DF = 1/(sampleDuration*power2N);
     frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
-    lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
+%     lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
      
-    eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
+%     eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
     % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
     % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
     % or to the square root of the bandwidth when expressed as pressure 
 
-    noise = randn(1,power2N); %create random Gaussian noise in time domain
-    fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); %transform noise into frequency domain, apply gain and transform back into time domain
+%     noise = randn(1,power2N); %create random Gaussian noise in time domain
+%     fNoise = real(ifft([eeFilter fliplr(eeFilter)].*fft(noise))); %transform noise into frequency domain, apply gain and transform back into time domain
 %     fNoise = noise;     %add this line to play a white noise instead of equally-exciting noise
+
+    fNoise = randn(1,power2N); %create random Gaussian noise in time domain
+    
+    fNoiseVrmsPreLevel = sqrt(mean((fNoise).^2))
+    
     if logical(AMod) %apply amplitude modulation
       modenv = sin(2*pi*AMod*sampleDuration*(0:power2N-1));
       fNoise = (1+modenv).*fNoise;    
@@ -1349,6 +1344,13 @@ function tdtMRI
     end
     
     fNoise = fNoise(:,1:N);
+    
+    for i = 1:2
+        NoiseVrms(i) = sqrt(mean((fNoise(i,:)).^2));
+        NoisedB(i) = 20*log10(sqrt(mean((fNoise(i,:)).^2)));
+    end
+        NoiseVrms
+        NoisedB
   end
 
   % ***** lcfLEE *****
@@ -1400,31 +1402,58 @@ function tdtMRI
     end
   end
 
-%   function hClipWarning = checkNoiseLevel(signal,hClipWarning)
-%       tdtVoltage = zeros(1,size(signal,1));
-%       transducerVoltage = zeros(1,size(signal,1));
-%       for i = 1:size(signal,1)
-%           tdtVoltage(i) = max(max(signal(i,:)*10^((calibrationGainLeft-LEE)/20)));
-%           transducerVoltage(i) = max(max(signal(i,:)*10^((calibrationGainLeft-LEE+HB7Gain)/20)));
-%       end
-%       
-%       if max(tdtVoltage)>maxVoltage
-%           %find which TDT attenuation setting would solve the problem
-%           newHB7Gain = HB7Gain + 3*ceil(20*(log10(max(tdtVoltage)/maxVoltage))/3);
-%           hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!! (' mat2str(max(tdtVoltage)) ')'],...
-%               ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
-%               'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
-%           NEWtransducerVoltage =  max(max(signal(i,:)*10^((calibrationGainLeft-LEE+newHB7Gain)/20)));
-%       else
-%           if ishandle(hClipWarning)
-%               delete(hClipWarning);
-%           end
-%       end    
-%            
-%   end
+    function printVoltage(fNoise)
+        
+%         NoiseVRMS = sqrt(mean(fNoise.^2))
+%         NoiseVPeak = max(max(fNoise))
+%         NoisedBRMS = 20*log10(NoiseVRMS)
+%         NoisedBPeak = 20*log10(NoiseVPeak)
+%         NoisedBcrestRatio = NoisedBPeak -NoisedBRMS
+calGain{1} = calibrationGainLeft;
+calGain{2} = calibrationGainRight;
+for i = 1:2
+        NoiseVrmsHeadphone(i) = sqrt(mean((fNoise(i,:)*10^((calGain{i}+HB7Gain)/20)).^2));
+        NoiseVrmsTDT(i) = sqrt(mean((fNoise(i,:)*10^(calGain{i}/20)).^2));
+        NoiseVPeakTDT(i) = max(max((fNoise(i,:)*10^(calGain{i}/20))));
 
+end
+NoiseVrmsHeadphone
+NoiseVrmsTDT
+NoiseVPeakTDT
+
+% *10^((calibrationGainLeft)/20)
+%         NoiseLeftVrmsHeadphone = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft)/20)).^2))
+%         NoiseRightVrmsHeadphone = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight)/20)).^2))
+%         
+%         NoiseLeftVrmsTDT = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft-HB7Gain)/20)).^2))
+%         NoiseRightVrmsTDT = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight-HB7Gain)/20)).^2))
+% %         
+%         NoiseLeftVPeak = max(max((fNoise(1,:)*10^((calibrationGainLeft-HB7Gain)/20))))
+%         NoiseRightVPeak = max(max((fNoise(2,:)*10^((calibrationGainRight-HB7Gain)/20))))
+% %         
+% % %         NoiseLeftVdiff = NoiseLeftVPeak - NoiseLeftVRMS
+% % %         NoiseRightVdiff = NoiseRightVPeak - NoiseRightVRMS
+% %         
+% %         NoiseLeftdBRMS = 20*log10(NoiseLeftVRMS)
+% %         NoiseRightdBRMS = 20*log10(NoiseRightVRMS)
+% % 
+% %         NoiseLeftdBPeak = 20*log10(NoiseLeftVPeak)
+% %         NoiseRightdBPeak = 20*log10(NoiseRightVPeak)
+% %         
+% %         NoiseLeftdBcrestRatio = NoiseLeftdBPeak - NoiseLeftdBRMS
+% %         NoiseRightdBcrestRatio = NoiseRightdBPeak -NoiseRightdBRMS
+% %         CalVLeft = 10^((calibrationGainLeft)/20)
+% %         CalVRight = 10^((calibrationGainRight)/20)
+%         
+%         NoiseLeftVRMS = sqrt(mean((fNoise(1,:)).^2))
+%         NoiseRightVRMS = sqrt(mean((fNoise(2,:)).^2))
+% 
+%         dBLevelLeft = 20*log10(sqrt(mean((fNoise(1,:)).^2)))
+%         dBLevelRight = 20*log10(sqrt(mean((fNoise(2,:)).^2)))
+        
+    end
     function HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight)
-
+        
         N = 261900;
         power2N = 2^ceil(log2(N)); %find next larger power of 2
         DF = 1/(sampleDuration*power2N);
@@ -1432,92 +1461,162 @@ function tdtMRI
         
         NomLevelLeft = - calibrationLevelLeft - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
         NomLevelRight = - calibrationLevelRight - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
-                        
+        
+        bp = zeros(size(frq));
+        bp(and(frq>=lcfInvNErb(lcfNErb(1)-0.5),frq<=lcfInvNErb(lcfNErb(1)+0.5))) = 1;
+        ee = 1./sqrt(lcfErb(frq));
+        ee = ee/sqrt(mean((bp.*ee).^2)); % create an equally exciting noise with an RMS of 1 per 1 ERB
+        ee = 20.*log10(ee); % convert to dB
+                
         % change masking noise to Threshold Equalising Noise using Critical Ratios from Hawkins and Stevens 1950
         if strcmp(CriticalRatio,'Zwicker')
             CriticalRatioFFT = 10*log10(10^(1/10)-1)*ones(size(frq));
         elseif strcmp(CriticalRatio,'Hawkins')
             CriticalRatioFFT = getCriticalRatioPerERB(frq*1000);
         end
-
-        thresholdBaseline = NLevel; %% change to baseline threshold
-        thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
+                
+        thresholdBaselineFFT = NLevel * ones(size(frq));
         
-%         threshold = 70;
+        threshold = 70;
         if strcmp(hearingLossSimulation,'sHFHL')
             thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
-            % or find what value at 8 kHz is
-            % thresholdHearingLossFFT(thresholdHearingLossFFT<threshold) = threshold;
+            thresholdHearingLossFFT(thresholdHearingLossFFT>threshold) = threshold;
             levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
-            % levelFFT(levelFFT>threshold) = threshold;
         elseif strcmp(hearingLossSimulation,'none')
             thresholdHearingLossFFT = zeros(1,length(frq));
             levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
         end
         
-        lev = -10*log10(lcfErb(frq));
-        NF = lcfNErb(1);
-        F1 = lcfInvNErb(NF-0.5);
-        F2 = lcfInvNErb(NF+0.5);
-        ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB
-   
+        levelFFT = ee + levelFFT;
+                
         if isfield(transferFunction,'frequencies')
-        for i = 1:length(transferFunction)
-            headphoneTransferFunction(i,:) = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
-            %             fftTotal(i,:) = ee_1kHz + levelFFT - headphoneTransferFunction(i,:);
-            fftTotal(i,:) = ee_1ERB + levelFFT - headphoneTransferFunction(i,:);
-            IntensityTotal(i) = sum(10.^(fftTotal(i,:)/10))/length(fftTotal(i,:)); % *2/(2*N)
-            levelTotaldB(i) = 10*log10(IntensityTotal(i));
-            
-            if isfield(params,'nFrequencies')
-                % check if frequencies
-                allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
-                allFrequenciesLevels(i,:) = params.level - (interp1(transferFunction(i).frequencies,transferFunction(i).fft,allFrequencies,'spline'));
-                stimuliMaxLevel(i) = max(allFrequenciesLevels(i,:));
-            else
-                stimuliFFT(i,:) = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
-                StimuliIntensityTotal(i) = sum(10.^(stimuliFFT(i,:)/10))/length(stimuliFFT(i,:)); % *2/(2*N)
-                stimuliMaxLevel(i) = StimuliIntensityTotal(i) + params.level;
+            for i = 1:length(transferFunction)
+                headphoneTransferFunction(i,:) = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
+                fftTotal(i,:) = levelFFT - headphoneTransferFunction(i,:);
+                VrmsTotal(i) = sqrt(mean((10.^(fftTotal(i,:)/20)).^2));
+                dBlevelTotal(i) = 20*log10(VrmsTotal(i));
+                
+                if isfield(params,'nFrequencies')
+                    % check if frequencies
+                    allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
+                    allFrequenciesLevels(i,:) = params.level - (interp1(transferFunction(i).frequencies,transferFunction(i).fft,allFrequencies,'spline'));
+                    dBlevelStimuli(i) = max(allFrequenciesLevels(i,:));
+                    VrmsStimuli(i) = 10^(dBlevelStimuli(i)/20);
+                else
+                    stimuliFFT(i,:) = params.level*ones(size(frq)) - interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq,'spline');
+                    VrmsStimuli(i) = sqrt(mean((10.^(stimuliFFT(i,:)/20)).^2));
+                    dBlevelStimuli(i) = 20*log10(VrmsStimuli(i));
+                end
             end
-        end
         else
-            fftTotal = ee_1ERB + levelFFT;
-            IntensityTotal = sum(10.^(fftTotal/10))/length(fftTotal); % *2/(2*N)
-            levelTotaldB = 10*log10(IntensityTotal);
-            stimuliMaxLevel = params.level;            
-        end    
-        levelTotaldB = levelTotaldB + 14; % add 14 dB headroom to account for peaks
-        MaxLevel = max([levelTotaldB stimuliMaxLevel]);
-        NomLevel = max(NomLevelLeft,NomLevelRight);
+            fftTotal = levelFFT;
+            VrmsTotal = sqrt(mean((10.^(fftTotal/20)).^2));
+            dBlevelTotal = 20*log10(VrmsTotal);
+            dBlevelStimuli = params.level;
+            VrmsStimuli = 10^(dBlevelStimuli/20);
+        end
+%         levelTotaldB = levelTotaldB + 14; % add 14 dB headroom to account for peaks
+%         Headroom = 0;
+%         MaxLevel = max([(levelTotaldB + Headroom) (stimuliMaxLevel + Headroom)]);
+%         levelTotalPlusHeadroom = 10.^((levelTotaldB + Headroom)./20);
+
+VrmsTotal
+dBlevelTotal
+VrmsStimuli
+dBlevelStimuli
+
+        [MaxLevel index] = max([dBlevelTotal dBlevelStimuli]);
+%          NomLevel = max(NomLevelLeft,NomLevelRight);
+        if index == 1
+            NomLevel = NomLevelLeft;
+        elseif index == 3
+            NomLevel = NomLevelLeft;
+        else
+            NomLevel = NomLevelRight;
+        end
+        
         HB7Gain =  MaxLevel + NomLevel;
         HB7Gain = min(max(ceil(HB7Gain/3)*3,-27),0);
         
-        if isfield(transferFunction,'frequencies')
         figure
-        markers = {'bo','ro'};
+        plot(frq,ee)
+        hold on
+        plot(frq,thresholdBaselineFFT)
+        plot(frq,thresholdHearingLossFFT)
+        plot(frq,CriticalRatioFFT)
+        xlim([min(frq) max(frq)])
+        xlabel('Frequency (kHz)')
+        ylabel('dB SPL')
+        if isfield(transferFunction,'frequencies')
         for i = 1:length(transferFunction)
-%             subplot(2,1,1)
-            plot(frq,fftTotal(i,:))
-            hold on
-%             subplot(2,1,2)
-            if isfield(params,'nFrequencies')
-                for ii = 1:length(allFrequencies)
-                    plot(allFrequencies(ii),allFrequenciesLevels(i,ii),markers{i})
+        plot(frq,headphoneTransferFunction(i,:))
+        plot(frq,fftTotal(i,:))
+        end        
+        legend('ee',...
+                'thresholdBaselineFFT',...
+                'thresholdHearingLossFFT',...
+                'CriticalRatioFFT',...
+                'Headphone tf - Left',...                
+                'fftTotal - Left',...
+                'fftTotal - Right',...
+                'Headphone tf - Right',...
+                'Location','best')
+        else
+            plot(frq,fftTotal)
+            legend('ee',...
+                'thresholdBaselineFFT',...
+                'thresholdHearingLossFFT',...
+                'CriticalRatioFFT',...
+                'fftTotal',...
+                'Location','best')
+        end
+                    
+        
+        if isfield(transferFunction,'frequencies')
+            figure
+            markers = {'bo','ro'};
+            for i = 1:length(transferFunction)
+                plot(frq,fftTotal(i,:))
+                hold on
+                text((max(frq)*i/2)/2,dBlevelTotal(i),['Noise Level = ' mat2str(round(dBlevelTotal(i)))]);
+                if isfield(params,'nFrequencies')
+                    for ii = 1:length(allFrequencies)
+                        plot(allFrequencies(ii),allFrequenciesLevels(i,ii),markers{i})
+                        hold on
+                    end
+                    hold on
+                else
+                    plot(frq,stimuliFFT(i,:))
                     hold on
                 end
-                hold on
-            else
-                plot(frq,stimuliFFT(i,:))
-                hold on
+                
+                text((max(frq)*i/2)/2,dBlevelStimuli(i),['Stimuli Level = ' mat2str(round(dBlevelStimuli(i)))]);
             end
+            xlim([min(frq) max(frq)])
+            xlabel('Frequency (kHz)')
+            ylabel('dB SPL')
+            legend('Masking Noise - Left',...
+                'Masking Noise - Right',...
+                'Location','best')
+%             text(8,60,['Max Level = ' mat2str(MaxLevel)]);
         end
-        legend('Masking Noise - Left',...
-            'Masking Noise - Right',...
-            'Stimuli - Left',...
-            'Stimuli - Right',...
-            'Location','best')
-        text(8,60,['Max Level = ' mat2str(MaxLevel)]);
-        end       
+        
+%         thresholdBaseline = NLevel; %% change to baseline threshold
+%         thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
+        %             lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
+%             eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient
+%         Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
+%                 lev = -10*log10(lcfErb(frq));
+%                 NF = lcfNErb(1);
+%                 F1 = lcfInvNErb(NF-0.5);
+%                 F2 = lcfInvNErb(NF+0.5);
+%                 ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB
+        
+%         eeFFT = 1./sqrt(lcfErb(frq));
+%         NF = lcfNErb(1);
+%         F1 = lcfInvNErb(NF-0.5);
+%         F2 = lcfInvNErb(NF+0.5);
+%         ee_1ERB_2 = eeFFT - sum(eeFFT(and(frq>=F1,frq<=F2))/length(find(and(frq>=F1,frq<=F2))));
     end
 
   % ***** applyInverseTransfer
@@ -1558,6 +1657,11 @@ function tdtMRI
 
 function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation)
     
+    bp = zeros(size(frq));
+    bp(and(frq>=lcfInvNErb(lcfNErb(1)-0.5),frq<=lcfInvNErb(lcfNErb(1)+0.5))) = 1;
+    ee = 1./sqrt(lcfErb(frq));
+    ee = ee/sqrt(mean((bp.*ee).^2));
+    
     % change masking noise to Threshold Equalising Noise using Critical Ratios from Hawkins and Stevens 1950
     if strcmp(CriticalRatio,'Zwicker')
         CriticalRatioFFT = 10*log10(10^(1/10)-1)*ones(size(frq));
@@ -1565,21 +1669,49 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
         CriticalRatioFFT = getCriticalRatioPerERB(frq*1000);
     end
 
-    thresholdBaseline = NLevel; %% change to baseline threshold
-    thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
-
-%     threshold = 70;
+    thresholdBaselineFFT = NLevel; 
+    threshold = 70;
     if strcmp(hearingLossSimulation,'sHFHL')
         thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
-        % or find what value at 8 kHz is
-%         thresholdHearingLossFFT(thresholdHearingLossFFT<threshold) = threshold;
+        thresholdHearingLossFFT(thresholdHearingLossFFT>threshold) = threshold;
         levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
-%         levelFFT(levelFFT>threshold) = threshold;        
     elseif strcmp(hearingLossSimulation,'none')
-        thresholdHearingLossFFT = zeros(1,length(frq));
+%         thresholdHearingLossFFT = zeros(1,length(frq));
         levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
-    end      
-   
+    end
+        
+    % create filter with all shaping and level parameters
+    levelFFT = [levelFFT fliplr(levelFFT)];
+    ee = [ee fliplr(ee)];
+    
+    N = length(levelFFT)/2;
+    noiseFFT = abs(fft(fNoise));
+    figure;subplot(3,1,1);plot((0:N-1),noiseFFT(1:N));
+    subplot(3,1,2);
+    plot((0:N-1),20*log10(ee(1:N)) + levelFFT(1:N),'b');
+    hold on
+    plot((0:N-1),20*log10(ee(1:N)),'r');
+    plot((0:N-1),levelFFT(1:N),'g');
+    subplot(3,1,3);plot((0:N-1),ee(1:N) .* noiseFFT(1:N).*10.^(levelFFT(1:N)/20),'b');
+    hold on
+    plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20),'g');
+    plot((0:N-1),ee(1:N) .* noiseFFT(1:N),'r');
+    
+    fNoise = real(ifft((ee.* fft(fNoise)).*10.^(levelFFT/20))); %convert levelFFT to amplification/attenuation coefficient   
+
+%     fNoise = real(ifft(totalFFT .* fft(fNoise))); %convert to amplification/attenuation coefficient  
+    
+%     subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
+    
+    % apply shaping and level filter to masking noise (fNoise)
+%     fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); %convert to amplification/attenuation coefficient      
+    
+%     lev = -10*log10(lcfErb(frq));
+%     NF = lcfNErb(1);
+%     F1 = lcfInvNErb(NF-0.5);
+%     F2 = lcfInvNErb(NF+0.5);
+%     ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB   
+    
 %     lev = -10*log10(lcfErb(frq));
 %     ee_1kHz = lev - (interp1(frq,lev,1));
 %     tf = plotTransferFunction_S14;
@@ -1591,13 +1723,7 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
 %     
 %     allFrequencies = lcfInvNErb(linspace(lcfNErb(0.1),lcfNErb(8),32)); 
 %    
-%     stimuliLevels = 80 - (interp1(tf(1).frequencies,tf(1).fft,allFrequencies,'spline'));
-%          
-    levelFFT = [levelFFT fliplr(levelFFT)];
-    
-%     N = length(levelFFT)/2;
-%     noiseFFT = abs(fft(fNoise));
-    
+%     stimuliLevels = 80 - (interp1(tf(1).frequencies,tf(1).fft,allFrequencies,'spline'));    
 %     figure
 %     plot(frq,ee_1kHz)
 %     hold on
@@ -1624,13 +1750,8 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
 %         'Stimuli Levels',...
 %         'Location','best')
 %     text(8,60,mat2str(levelTotaldB))
-  
-%     figure;subplot(3,1,1);plot((0:N-1),noiseFFT(1:N));
-%     subplot(3,1,2);plot((0:N-1),levelFFT(1:N));
-%     subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
-    
-    fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); % 10.^(CriticalRatioFFT/20); %convert to amplification/attenuation coefficient   
-    
+%   
+
 end
 
 function CriticalRatioPerERB_int = getCriticalRatioPerERB(f)
