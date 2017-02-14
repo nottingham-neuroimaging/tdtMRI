@@ -1453,7 +1453,7 @@ NoiseVPeakTDT
     end
     function HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight)
             
-        power2N = 2^18; %find next larger power of 2
+        power2N = 2^18; %
         DF = 1/(sampleDuration*power2N);
         frq = DF*(1:power2N/2);
         
@@ -1476,16 +1476,16 @@ NoiseVPeakTDT
         end
                 
         thresholdBaselineFFT = NLevel * ones(size(frq));
-        
-        figure
-        
-        plot(frq,ee,'b')
-        hold on
-        plot(frq,ee*sampleDuration,'g')
-        plot(frq/DF,ee/DF,'r')
-        plot(frq,thresholdBaselineFFT)
-        plot(frq,NLevel+20.*log10(ee))
-        plot(frq,NLevel+20.*log10(ee*sampleDuration))
+%         
+%         figure
+%         
+%         plot(frq,ee,'b')
+%         hold on
+%         plot(frq,ee*sampleDuration,'g')
+%         plot(frq/DF,ee/DF,'r')
+%         plot(frq,thresholdBaselineFFT)
+%         plot(frq,NLevel+20.*log10(ee))
+%         plot(frq,NLevel+20.*log10(ee*sampleDuration))
         
         threshold = 70;
         if strcmp(hearingLossSimulation,'sHFHL')
@@ -1583,7 +1583,31 @@ dBlevelStimuli
                 'fftTotal',...
                 'Location','best')
         end
-                    
+        
+%         frq_1Hz = 1:20000;
+%         bp = zeros(size(frq_1Hz));
+%         bp(and(frq_1Hz>=(lcfInvNErb(lcfNErb(1)-0.5))*1000,frq_1Hz<=(lcfInvNErb(lcfNErb(1)+0.5))*1000)) = 1;
+%         ee_1Hz = 1./sqrt(lcfErb(frq_1Hz));
+%         ee_1Hz = ee_1Hz/sqrt(mean((bp.*ee_1Hz).^2)); % create an equally exciting noise with an RMS of 1 per 1 ERB
+%         ee_1Hz = 20.*log10(ee_1Hz);
+%         ee_1Hz_RS = interp1(frq_1Hz,ee_1Hz,frq);
+        figure
+%         plot(frq,ee)
+        hold on
+        plot(frq,thresholdBaselineFFT,'g')
+        plot(frq,thresholdHearingLossFFT,'b')
+        plot(frq,CriticalRatioFFT,'r')
+        plot(frq,max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT, 'm', 'LineWidth', 2)
+        xlim([min(frq) max(frq)])
+        xlabel('Frequency (kHz)')
+        ylabel('dB SPL')            
+        legend( 'Baseline threshold',...
+                'Hearing Loss threshold',...
+                'Critical Ratio',...
+                'max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT',...
+                'Location','best')
+        title('Gain applied to EE noise (Normalised to 1Vrms in 1 ERB) as a function of Frequency')
+                   
         
         if isfield(transferFunction,'frequencies')
             figure
