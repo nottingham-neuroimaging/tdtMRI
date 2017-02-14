@@ -1457,6 +1457,8 @@ NoiseVPeakTDT
         DF = 1/(sampleDuration*power2N);
         frq = DF*(1:power2N/2);
         
+        SR = 24.4140625
+        
         NomLevelLeft = - calibrationLevelLeft - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
         NomLevelRight = - calibrationLevelRight - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
         
@@ -1465,7 +1467,7 @@ NoiseVPeakTDT
         ee = 1./sqrt(lcfErb(frq));
         ee = ee/sqrt(mean((bp.*ee).^2)); % create an equally exciting noise with an RMS of 1 per 1 ERB
         ee = 20.*log10(ee); % convert to dB
-                
+                 
         % change masking noise to Threshold Equalising Noise using Critical Ratios from Hawkins and Stevens 1950
         if strcmp(CriticalRatio,'Zwicker')
             CriticalRatioFFT = 10*log10(10^(1/10)-1)*ones(size(frq));
@@ -1474,6 +1476,16 @@ NoiseVPeakTDT
         end
                 
         thresholdBaselineFFT = NLevel * ones(size(frq));
+        
+        figure
+        
+        plot(frq,ee,'b')
+        hold on
+        plot(frq,ee*sampleDuration,'g')
+        plot(frq/DF,ee/DF,'r')
+        plot(frq,thresholdBaselineFFT)
+        plot(frq,NLevel+20.*log10(ee))
+        plot(frq,NLevel+20.*log10(ee*sampleDuration))
         
         threshold = 70;
         if strcmp(hearingLossSimulation,'sHFHL')
@@ -1764,7 +1776,7 @@ CriticalRatioPerERB_int = zeros(1,length(f));
 ERB = lcfErb(f_measured_hz/1000);
 
 CriticalRatioPerERB = CriticalRatioMeasured-10*log10(ERB);
-CriticalRatio_Zwicker = 10*log10(10^(1/10)-1)*ones(size(f_measured_hz));
+% CriticalRatio_Zwicker = 10*log10(10^(1/10)-1)*ones(size(f_measured_hz));
 
 fit_extrapolate_100HzMinus = polyfit(f_measured_hz(1:4),CriticalRatioPerERB(1:4),1);
 fit_extrapolate_9kHzPlus = polyfit(f_measured_hz(12:end),CriticalRatioPerERB(12:end),1);
