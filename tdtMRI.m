@@ -1497,6 +1497,12 @@ NoiseVPeakTDT
             levelFFT = thresholdBaselineFFT - CriticalRatioFFT;
         end
         
+        %             lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
+        %             eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient
+        
+        levelFFT = 20*log(10.^((ee/sqrt(power2N/2))/20) .* 10.^(levelFFT/20));
+        %         ee.*10.^(levelFFT/20)
+        levelFFT =(ee/sqrt(power2N/2)) + levelFFT;
         levelFFT = ee + levelFFT;
         
         transFFT = interp1(transferFunction(1).frequencies,transferFunction(1).fft,frq,'spline');
