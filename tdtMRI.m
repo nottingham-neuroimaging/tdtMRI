@@ -786,8 +786,7 @@ function tdtMRI
           end
           signalBufferMaxSize = invoke(RP2,'GetTagVal','SignalBufSize'); % this is the signal buffer size at circuit compilation
           noiseBufferSize = invoke(RP2,'GetTagVal','NoiseBufSize');   %get the noise buffer size     
-          if isequal(TDT,tdtOptions{1})
-%             HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight);                
+          if isequal(TDT,tdtOptions{1})        
             displayMessage({sprintf('==> Make sure TDT HB7 gain is set to %.0f dB!',HB7Gain)});
           end
         else
@@ -1330,7 +1329,7 @@ function tdtMRI
 %     fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels  
     fNoise = fNoise/sqrt(mean(fNoise.^2));  %normalize amplitude to rms=1
         
-    fNoiseVrmsPreLevel = sqrt(mean((fNoise).^2))
+%     fNoiseVrmsPreLevel = sqrt(mean((fNoise).^2)) % Check normalisation of noise to 1 volt rms
     
     %% if this is right, change duplication for left right channels to after this and HL simulation
   
@@ -1344,12 +1343,13 @@ function tdtMRI
     
 %     fNoise = fNoise(:,1:N);
     
-    for i = 1:2
-        NoiseVrms(i) = sqrt(mean((fNoise(i,:)).^2));
-        NoisedB(i) = 20*log10(sqrt(mean((fNoise(i,:)).^2)));
-    end
-        NoiseVrms
-        NoisedB
+    % Check the voltage of fNoise after gain is applied
+%     for i = 1:2
+%         NoiseVrms(i) = sqrt(mean((fNoise(i,:)).^2));
+%         NoisedB(i) = 20*log10(sqrt(mean((fNoise(i,:)).^2)));
+%     end
+%         NoiseVrms
+%         NoisedB
   end
 
   % ***** lcfLEE *****
@@ -1420,36 +1420,6 @@ NoiseVrmsHeadphone
 NoiseVrmsTDT
 NoiseVPeakTDT
 
-% *10^((calibrationGainLeft)/20)
-%         NoiseLeftVrmsHeadphone = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft)/20)).^2))
-%         NoiseRightVrmsHeadphone = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight)/20)).^2))
-%         
-%         NoiseLeftVrmsTDT = sqrt(mean((fNoise(1,:)*10^((calibrationGainLeft-HB7Gain)/20)).^2))
-%         NoiseRightVrmsTDT = sqrt(mean((fNoise(2,:)*10^((calibrationGainRight-HB7Gain)/20)).^2))
-% %         
-%         NoiseLeftVPeak = max(max((fNoise(1,:)*10^((calibrationGainLeft-HB7Gain)/20))))
-%         NoiseRightVPeak = max(max((fNoise(2,:)*10^((calibrationGainRight-HB7Gain)/20))))
-% %         
-% % %         NoiseLeftVdiff = NoiseLeftVPeak - NoiseLeftVRMS
-% % %         NoiseRightVdiff = NoiseRightVPeak - NoiseRightVRMS
-% %         
-% %         NoiseLeftdBRMS = 20*log10(NoiseLeftVRMS)
-% %         NoiseRightdBRMS = 20*log10(NoiseRightVRMS)
-% % 
-% %         NoiseLeftdBPeak = 20*log10(NoiseLeftVPeak)
-% %         NoiseRightdBPeak = 20*log10(NoiseRightVPeak)
-% %         
-% %         NoiseLeftdBcrestRatio = NoiseLeftdBPeak - NoiseLeftdBRMS
-% %         NoiseRightdBcrestRatio = NoiseRightdBPeak -NoiseRightdBRMS
-% %         CalVLeft = 10^((calibrationGainLeft)/20)
-% %         CalVRight = 10^((calibrationGainRight)/20)
-%         
-%         NoiseLeftVRMS = sqrt(mean((fNoise(1,:)).^2))
-%         NoiseRightVRMS = sqrt(mean((fNoise(2,:)).^2))
-% 
-%         dBLevelLeft = 20*log10(sqrt(mean((fNoise(1,:)).^2)))
-%         dBLevelRight = 20*log10(sqrt(mean((fNoise(2,:)).^2)))
-        
     end
     function HB7Gain = setHB7Gain(calibrationLevelLeft,calibrationLevelRight)
             
@@ -1499,10 +1469,10 @@ NoiseVPeakTDT
         
         %             lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
         %             eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient
-        
-        levelFFT = 20*log(10.^((ee/sqrt(power2N/2))/20) .* 10.^(levelFFT/20));
-        %         ee.*10.^(levelFFT/20)
-        levelFFT =(ee/sqrt(power2N/2)) + levelFFT;
+%         
+%         levelFFT = 20*log(10.^((ee/sqrt(power2N/2))/20) .* 10.^(levelFFT/20));
+%         %         ee.*10.^(levelFFT/20)
+%         levelFFT =(ee/sqrt(power2N/2)) + levelFFT;
         levelFFT = ee + levelFFT;
         
         transFFT = interp1(transferFunction(1).frequencies,transferFunction(1).fft,frq,'spline');
@@ -1536,18 +1506,15 @@ NoiseVPeakTDT
             dBlevelStimuli = params.level;
             VrmsStimuli = 10^(dBlevelStimuli/20);
         end
-%         levelTotaldB = levelTotaldB + 14; % add 14 dB headroom to account for peaks
-%         Headroom = 0;
-%         MaxLevel = max([(levelTotaldB + Headroom) (stimuliMaxLevel + Headroom)]);
-%         levelTotalPlusHeadroom = 10.^((levelTotaldB + Headroom)./20);
+        
+        % Print Vrms and dB level of masking noise and stimuli
 
-VrmsTotal
-dBlevelTotal
-VrmsStimuli
-dBlevelStimuli
+        VrmsTotal
+        dBlevelTotal
+        VrmsStimuli
+        dBlevelStimuli
 
-        [MaxLevel index] = max([dBlevelTotal dBlevelStimuli]);
-%          NomLevel = max(NomLevelLeft,NomLevelRight);
+        [MaxLevel, index] = max([dBlevelTotal dBlevelStimuli]);
         if index == 1 || index == 3
             NomLevel = NomLevelLeft;
         else
@@ -1643,23 +1610,7 @@ dBlevelStimuli
                 'Location','best')
 %             text(8,60,['Max Level = ' mat2str(MaxLevel)]);
         end
-        
-%         thresholdBaseline = NLevel; %% change to baseline threshold
-%         thresholdBaselineFFT = ones(size(frq)) * thresholdBaseline;
-        %             lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
-%             eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient
-%         Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
-%                 lev = -10*log10(lcfErb(frq));
-%                 NF = lcfNErb(1);
-%                 F1 = lcfInvNErb(NF-0.5);
-%                 F2 = lcfInvNErb(NF+0.5);
-%                 ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB
-        
-%         eeFFT = 1./sqrt(lcfErb(frq));
-%         NF = lcfNErb(1);
-%         F1 = lcfInvNErb(NF-0.5);
-%         F2 = lcfInvNErb(NF+0.5);
-%         ee_1ERB_2 = eeFFT - sum(eeFFT(and(frq>=F1,frq<=F2))/length(find(and(frq>=F1,frq<=F2))));
+
     end
 
   % ***** applyInverseTransfer
@@ -1742,71 +1693,21 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
     
     fNoise = real(ifft((ee.*10.^(levelFFT/20).* fft(fNoise)))); %convert levelFFT to amplification/attenuation coefficient   
 
-%     fNoise = real(ifft(totalFFT .* fft(fNoise))); %convert to amplification/attenuation coefficient  
-    
-%     subplot(3,1,3);plot((0:N-1),noiseFFT(1:N).*10.^(levelFFT(1:N)/20));
-    
-    % apply shaping and level filter to masking noise (fNoise)
-%     fNoise = real(ifft(fft(fNoise).*10.^(levelFFT/20))); %convert to amplification/attenuation coefficient      
-    
-%     lev = -10*log10(lcfErb(frq));
-%     NF = lcfNErb(1);
-%     F1 = lcfInvNErb(NF-0.5);
-%     F2 = lcfInvNErb(NF+0.5);
-%     ee_1ERB = lev - 10*log10(sum(10.^(lev(and(frq>=F1,frq<=F2))/10))/length(find(and(frq>=F1,frq<=F2)))); % ERB level around 1 kHz is 0 dB   
-    
-%     lev = -10*log10(lcfErb(frq));
-%     ee_1kHz = lev - (interp1(frq,lev,1));
-%     tf = plotTransferFunction_S14;
-    
-%     headphoneTransferFunction = interp1(tf(1).frequencies,tf(1).fft,frq,'spline');
-%     fftTotal = ee_1kHz + levelFFT - headphoneTransferFunction;
-%     IntensityTotal = sum(10.^(fftTotal/10))/length(fftTotal); % *2/(2*N)
-%     levelTotaldB = 10*log10(IntensityTotal);
-%     
-%     allFrequencies = lcfInvNErb(linspace(lcfNErb(0.1),lcfNErb(8),32)); 
-%    
-%     stimuliLevels = 80 - (interp1(tf(1).frequencies,tf(1).fft,allFrequencies,'spline'));    
-%     figure
-%     plot(frq,ee_1kHz)
-%     hold on
-%     plot(frq,thresholdBaselineFFT)
-%     plot(frq,CriticalRatioFFT)
-%         if strcmp(hearingLossSimulation,'sHFHL')
-%         plot((frq),thresholdHearingLossFFT(1:N))
-%     end
-%     plot(frq,levelFFT(1:N))
-%     plot(frq,headphoneTransferFunction)
-%     plot(frq,fftTotal,'LineWidth',2)
-% 
-%         plot(allFrequencies,stimuliLevels,'ko')
-%     xlim([min(frq) max(frq)])
-%     xlabel('Frequency (kHz)')
-%     ylabel('dB SPL')
-%     legend('lev',...
-%         'thresholdBaselineFFT',...
-%         'CriticalRatioFFT',...
-%         'thresholdHearingLossFFT',...
-%         'levelFFT',...
-%         'headphoneTransferFunction',...
-%         'totalLevelFFT',...
-%         'Stimuli Levels',...
-%         'Location','best')
-%     text(8,60,mat2str(levelTotaldB))
-%   
-
 end
 
 function CriticalRatioPerERB_int = getCriticalRatioPerERB(f)
+    %
+%   usage: getCriticalRatioPerERB(f)
+%      by: Ben Gurer
+%    date: 19/01/2017
+% purpose: output the critical ratio values as determined by Hawkins And Stevens (1950) per ERB
 
-% f = 10.^(linspace(log10(20),log10(20000),100));
 CriticalRatioPerERB_int = zeros(1,length(f));
 
 [CriticalRatio_int CriticalRatioMeasured f_measured_hz] = getCriticalRatio_HawkinsAndStevens1950(f);
 ERB = lcfErb(f_measured_hz/1000);
 
 CriticalRatioPerERB = CriticalRatioMeasured-10*log10(ERB);
-% CriticalRatio_Zwicker = 10*log10(10^(1/10)-1)*ones(size(f_measured_hz));
 
 fit_extrapolate_100HzMinus = polyfit(f_measured_hz(1:4),CriticalRatioPerERB(1:4),1);
 fit_extrapolate_9kHzPlus = polyfit(f_measured_hz(12:end),CriticalRatioPerERB(12:end),1);
@@ -1815,22 +1716,11 @@ CriticalRatioPerERB_int(f<100) = max(CriticalRatioPerERB(1),polyval(fit_extrapol
 CriticalRatioPerERB_int(f>=100 & f<=9000) = interp1(f_measured_hz,CriticalRatioPerERB,f(f>=100 & f<=9000),'spline');
 CriticalRatioPerERB_int(f>9000) = max(CriticalRatioPerERB(end),polyval(fit_extrapolate_9kHzPlus,f(f>9000)));
 
-% figure; 
-% plot(f_measured_hz,CriticalRatioPerERB,'ko-');
-% hold on
-% plot(f,CriticalRatioPerERB_int,'r--')
-% legend('Critical Ratio (Measured)',...
-%     'Critical Ratio (Extrapolated)',...
-%     'Location','best')
-% set(gca,'XLim',[min(f) max(f)])
-% title('Critical Ratio Per ERB)')
-% xlabel('Frequency (Hz)') 
-% ylabel('dB')
 end
 
 function [CriticalRatio_int CriticalRatioMeasured f_measured_hz] = getCriticalRatio_HawkinsAndStevens1950(f)
 %
-%   usage: getCriticalRatio_HawkinsAndStevens1950
+%   usage: getCriticalRatio_HawkinsAndStevens1950(f)
 %      by: Ben Gurer
 %    date: 19/01/2017
 % purpose: output the critical ratio values as determined by Hawkins And Stevens (1950)
@@ -1843,10 +1733,7 @@ CriticalRatio_int = zeros(1,length(f));
 
 f_measured_hz = [100, 125, 175, 250, 350, 500, 700, 1000, 1400, 2000, 2800, 4000, 5600, 7000, 8000, 9000];
 CriticalRatioMeasured = [19, 17.75, 17.5, 16.25, 16.5 17.25, 17.75, 18.5, 19.25, 20.5, 22.5, 25, 25.5, 26.75, 27, 28.5];
-% CriticalRatioInt = interp1(f_measured_hz,CriticalRatio,f,'spline');
 
-% f_extrapolate_100HzMinus = linspace(20,100,10);
-% f_extrapolate_9kHzPlus = linspace(9000,20000,10); 
 fit_extrapolate_100HzMinus = polyfit(f_measured_hz(1:4),CriticalRatioMeasured(1:4),1);
 fit_extrapolate_9kHzPlus = polyfit(f_measured_hz(12:end),CriticalRatioMeasured(12:end),1);
 
@@ -1854,18 +1741,6 @@ CriticalRatio_int(f<100) = max(CriticalRatioMeasured(1),polyval(fit_extrapolate_
 CriticalRatio_int(f>=100 & f<=9000) = interp1(f_measured_hz,CriticalRatioMeasured,f(f>=100 & f<=9000),'spline');
 CriticalRatio_int(f>9000) = max(CriticalRatioMeasured(end),polyval(fit_extrapolate_9kHzPlus,f(f>9000)));
 
-
-% figure; 
-% plot(f_measured_hz,CriticalRatioMeasured,'ko-');
-% hold on
-% plot(f,CriticalRatio_int,'r--')
-% legend('Critical Ratio (Measured)',...
-%     'Critical Ratio (Extrapolated)',...
-%     'Location','best')
-% set(gca,'XLim',[min(f) max(f)])
-% title('Critical Ratio - Hawkins And Stevens (1950)')
-% xlabel('Frequency (kHz)') 
-% ylabel('dB')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1874,9 +1749,12 @@ end
 
 % ********** lcfSimulateHearingLoss **********
     function Threshold_dBSPL_FFT = lcfSimulateHearingLoss(frq)
-                
-        %% Create hearing loss simulation masking noise
-        % This masking noise aims to simualte hearing loss by raising the threshold of auditory perception.
+    %
+    %   usage: lcfSimulateHearingLoss(frq)
+    %      by: Ben Gurer
+    %    date: 19/01/2017
+    % purpose: Create hearing loss simulation masking noise
+    % This masking noise aims to simualte hearing loss by raising the threshold of auditory perception.
         
         Threshold_dBHL = createSteeplySlopingHearingLoss_dBHL(frq);
         
@@ -1885,47 +1763,47 @@ end
         Threshold_dBSPL_FFT = Threshold_dBHL + RETSPL_int;
                        
     end
+
     function RETSPL_int = getdBHLinSPL_inserts(f)
-        %
-        %   usage: getdBHLinSPL_inserts(f)
-        %      by: Ben Gurer
-        %    date: 19/01/2017
-        % purpose: output the dB Hearling Level values in dB Sound Pressure Level for insert transducers for frequencies specified using the input arguement
-        %
-        % discription:
-        % interpolates the dB HL values for input arguements of frequency from value specified by ISO 389.
-        
-        % BS EN ISO 389-2:1997
-        % Acoustics - Reference zero for the calibration of audiometric equipment — Part 2: Reference equivalent threshold sound
-        % pressure levels for pure tones and insert earphones.
-        % Transducer: Etymotic Research ER-3A
-        % Ear simulator: Occluded-ear simulator (IEC 711)
-        RETSPL_int = zeros(1,length(f));
-        
-        RETSPL_125_8000Hz = [28.0, 24.5 21.5, 17.5, 15.5, 13.0, 9.5, 7.5, 6.0, 5.5, 5.5, 8.5, 9.5, 9.5, 11.5, 13.5, 13.0, 13.0, 15.0, 18.5, 16.0, 16.0, 15.5];
-        
-        f_hz_measured_125_8000Hz = [125, 160, 200, 250, 315, 400, 500, 630, 750, 800, 1000, 1250, 1500, 1600, 2000, 2500, 3000, 3150, 4000, 5000, 6000, 6300, 8000];
-        
-        % Acoustics - Reference zero for the calibration of audiometric equipment - Part 5: Reference equivalent threshold sound
-        % pressure levels for pure tones in the frequency range 8 kHz to 16 kHz (ISO 389-5:2006)
-        % Transducer: Etymotic Research ER-2b
-        % Ear simulator: IEC 60711e
-        % Adapter: ISO 389-2:1994
-        
-        f_hz_measured_8000_16000Hz =[8000, 9000, 10000, 11200, 12500, 14000, 16000];
-        
-        RETSPL_8000_1600Hz = [19, 16, 20, 30.5, 37, 43.5, 53];
-        
-        % f = linspace(20,20000,20);
-        
+    %
+    %   usage: getdBHLinSPL_inserts(f)
+    %      by: Ben Gurer
+    %    date: 19/01/2017
+    % purpose: output the dB Hearling Level values in dB Sound Pressure Level for insert transducers for frequencies specified using the input arguement
+    %
+    % discription:
+    % interpolates the dB HL values for input arguements of frequency from value specified by ISO 389.
+
+    % BS EN ISO 389-2:1997
+    % Acoustics - Reference zero for the calibration of audiometric equipment — Part 2: Reference equivalent threshold sound
+    % pressure levels for pure tones and insert earphones.
+    % Transducer: Etymotic Research ER-3A
+    % Ear simulator: Occluded-ear simulator (IEC 711)
+    
+    RETSPL_int = zeros(1,length(f));
+
+    RETSPL_125_8000Hz = [28.0, 24.5 21.5, 17.5, 15.5, 13.0, 9.5, 7.5, 6.0, 5.5, 5.5, 8.5, 9.5, 9.5, 11.5, 13.5, 13.0, 13.0, 15.0, 18.5, 16.0, 16.0, 15.5];
+
+    f_hz_measured_125_8000Hz = [125, 160, 200, 250, 315, 400, 500, 630, 750, 800, 1000, 1250, 1500, 1600, 2000, 2500, 3000, 3150, 4000, 5000, 6000, 6300, 8000];
+
+    % Acoustics - Reference zero for the calibration of audiometric equipment - Part 5: Reference equivalent threshold sound
+    % pressure levels for pure tones in the frequency range 8 kHz to 16 kHz (ISO 389-5:2006)
+    % Transducer: Etymotic Research ER-2b
+    % Ear simulator: IEC 60711e
+    % Adapter: ISO 389-2:1994
+
+    f_hz_measured_8000_16000Hz =[8000, 9000, 10000, 11200, 12500, 14000, 16000];
+
+    RETSPL_8000_1600Hz = [19, 16, 20, 30.5, 37, 43.5, 53];
+
 %         figure
 %         plot(f_hz_measured_125_8000Hz,RETSPL_125_8000Hz,'ko-')
 %         hold on
 %         plot(f_hz_measured_8000_16000Hz,RETSPL_8000_1600Hz,'ko-')
-        
-        RETSPL_int = interp1([f_hz_measured_125_8000Hz f_hz_measured_8000_16000Hz(2:end)],[RETSPL_125_8000Hz RETSPL_8000_1600Hz(2:end)],f,'spline');
+
+    RETSPL_int = interp1([f_hz_measured_125_8000Hz f_hz_measured_8000_16000Hz(2:end)],[RETSPL_125_8000Hz RETSPL_8000_1600Hz(2:end)],f,'spline');
 %         plot(f,RETSPL_int,'r--')
-        
+
 %         legend('Threshold - 125 - 8000 Hz',...
 %             'Threshold - 8000 - 16000Hz',...
 %             'Threshold - Interpolated',...
@@ -1954,8 +1832,6 @@ end
 %         xlabel('Frequency (kHz)')
 %         ylabel('dB (HL)')
     end
-
-
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RP2-related functions
   
