@@ -114,8 +114,8 @@ function tdtMRI
   end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 2000;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
-  stimTR = 2000;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
+  TR = 7500;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
+  stimTR = 7500;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
   minTDTcycle = 7000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
                       % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
                       % before receiving the next one
@@ -128,7 +128,7 @@ function tdtMRI
                       % of each stimulus
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
-  syncTR = 8000;            % delay between simulated scanner pulses
+  syncTR = 7500;            % delay between simulated scanner pulses
   nRepeatsPerRun = 4;       %number of times the set of unique stimuli is repeated in a run
   currentRun=0;    
   completedRuns=0;          %to keep track of completed runs
@@ -1329,7 +1329,7 @@ function tdtMRI
 %     fNoise = repmat(fNoise/sqrt(mean(fNoise.^2)),2,1);  %normalize amplitude to rms=1 and duplicate for left and right channels  
     fNoise = fNoise/sqrt(mean(fNoise.^2));  %normalize amplitude to rms=1
         
-%     fNoiseVrmsPreLevel = sqrt(mean((fNoise).^2)) % Check normalisation of noise to 1 volt rms
+    fNoiseVrmsPreLevel = sqrt(mean((fNoise).^2)) % Check normalisation of noise to 1 volt rms
     
     %% if this is right, change duplication for left right channels to after this and HL simulation
   
@@ -1340,16 +1340,14 @@ function tdtMRI
     if ~strcmp(headphones,'None')  %apply inverse of headphones transfer function
       fNoise = applyInverseTransfer(fNoise);
     end
-    
-%     fNoise = fNoise(:,1:N);
-    
+        
     % Check the voltage of fNoise after gain is applied
-%     for i = 1:2
-%         NoiseVrms(i) = sqrt(mean((fNoise(i,:)).^2));
-%         NoisedB(i) = 20*log10(sqrt(mean((fNoise(i,:)).^2)));
-%     end
-%         NoiseVrms
-%         NoisedB
+    for i = 1:2
+        NoiseVrms(i) = sqrt(mean((fNoise(i,:)).^2));
+        NoisedB(i) = 20*log10(sqrt(mean((fNoise(i,:)).^2)));
+    end
+        NoiseVrms
+        NoisedB
   end
 
   % ***** lcfLEE *****
@@ -1427,7 +1425,7 @@ NoiseVPeakTDT
         DF = 1/(sampleDuration*power2N);
         frq = DF*(1:power2N/2);
         
-        SR = 24.4140625
+        SR = 24.4140625;
         
         NomLevelLeft = - calibrationLevelLeft - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
         NomLevelRight = - calibrationLevelRight - 3 + HB7CalibGain; %corresponding level for a 1voltRMS noise
@@ -1460,7 +1458,7 @@ NoiseVPeakTDT
         threshold = 70;
         if strcmp(hearingLossSimulation,'sHFHL')
             thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
-%             thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
+            thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
             levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
         elseif strcmp(hearingLossSimulation,'none')
             thresholdHearingLossFFT = zeros(1,length(frq)); % this is just used for plotting
@@ -1650,6 +1648,13 @@ NoiseVPeakTDT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation)
+%
+%   usage: lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulation)
+%      by: Ben Gurer
+%    date: 19/01/2017
+% purpose: Set the level of the masking noise. The gaussian noise is filtered to have a equal energy per Sets the desired masking level, applies the desired critical ratio and hearing loss simulation.
+%           Generates a filter in the frequency domain and applies this to the fNoise. fNoise is assumed to have an rms of 1 volt.
+    
     
     bp = zeros(size(frq));
     bp(and(frq>=lcfInvNErb(lcfNErb(1)-0.5),frq<=lcfInvNErb(lcfNErb(1)+0.5))) = 1;
@@ -1667,7 +1672,7 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
     threshold = 70;
     if strcmp(hearingLossSimulation,'sHFHL')
         thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
-%         thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
+        thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
         levelFFT = max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT;
     elseif strcmp(hearingLossSimulation,'none')
 %         thresholdHearingLossFFT = zeros(1,length(frq));
