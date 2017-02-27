@@ -1455,7 +1455,7 @@ NoiseVPeakTDT
 %         plot(frq,NLevel+20.*log10(ee))
 %         plot(frq,NLevel+20.*log10(ee*sampleDuration))
         
-        threshold = 70;
+        threshold = 80;
         if strcmp(hearingLossSimulation,'sHFHL')
             thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
             thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
@@ -1669,7 +1669,7 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
     end
 
     thresholdBaselineFFT = NLevel*ones(size(frq)); 
-    threshold = 70;
+    threshold = 80;
     if strcmp(hearingLossSimulation,'sHFHL')
         thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
         thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
