@@ -144,7 +144,7 @@ function tdtMRI
   noiseBufferSize = [];
   
   AMfrequency = 0; % default amplitude modulation frequency(0 = no modulation)
-  NLevel = 35;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
+  NLevel = 25;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
 %   SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
                                   % a signal is just detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
@@ -945,8 +945,8 @@ function tdtMRI
           fprintf(logFile, '  %s = %s%s \n',paramNames{iParams},repmat(' ',1,maxParamNameLength-length(paramNames{iParams})),num2str(params.(paramNames{iParams})));
         end
         fprintf(logFile, '\nDynamic scan duration (ms): \t %d \n', TR);
-%         fprintf(logFile, 'Noise Level: \t %d dB (%.3f dB SPL)\n', NLevel, NLevel-SNR1dB);
         fprintf(logFile, 'Noise Level: \t %d dB (CR = %s)\n', NLevel,CriticalRatio); % State the Critical Ratio calculation used. Can either be a constant (Zwicker), like before or vary as a function of frequency (Hawkins).
+        fprintf(logFile, 'Hearing Loss Simulation = %s\n', hearingLossSimulation);
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcond.\tfreq.(kHz)\tlevel(dB)\tbandwidth(kHz)\tduration(ms)\tname\tapproximate time (MM:SS)\n');
 
@@ -1455,7 +1455,7 @@ NoiseVPeakTDT
 %         plot(frq,NLevel+20.*log10(ee))
 %         plot(frq,NLevel+20.*log10(ee*sampleDuration))
         
-        threshold = 80;
+        threshold = 75;
         if strcmp(hearingLossSimulation,'sHFHL')
             thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
             thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
@@ -1472,10 +1472,10 @@ NoiseVPeakTDT
 %         %         ee.*10.^(levelFFT/20)
 %         levelFFT =(ee/sqrt(power2N/2)) + levelFFT;
         levelFFT = ee + levelFFT;
-        
-        transFFT = interp1(transferFunction(1).frequencies,transferFunction(1).fft,frq,'spline');
-        dBlevelTransTotal = 20*log10(sqrt(mean((10.^(transFFT/20)).^2)))
-        dBlevelTransERB = 20*log10(sqrt(mean(bp.*(10.^(transFFT/20)).^2)))
+%         
+%         transFFT = interp1(transferFunction(1).frequencies,transferFunction(1).fft,frq,'spline');
+%         dBlevelTransTotal = 20*log10(sqrt(mean((10.^(transFFT/20)).^2)))
+%         dBlevelTransERB = 20*log10(sqrt(mean(bp.*(10.^(transFFT/20)).^2)))
        
                 
         if isfield(transferFunction,'frequencies')
@@ -1498,6 +1498,8 @@ NoiseVPeakTDT
                 end
             end
         else
+            
+            allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
             fftTotal = levelFFT;
             VrmsTotal = sqrt(mean((10.^(fftTotal/20)).^2));
             dBlevelTotal = 20*log10(VrmsTotal);
@@ -1569,6 +1571,12 @@ NoiseVPeakTDT
         plot(frq,thresholdHearingLossFFT,'b')
         plot(frq,CriticalRatioFFT,'r')
         plot(frq,max(thresholdHearingLossFFT,thresholdBaselineFFT) - CriticalRatioFFT, 'm', 'LineWidth', 2)
+        if isfield(params,'nFrequencies')
+            for ii = 1:length(allFrequencies)
+                plot(allFrequencies(ii),params.level,'ro')
+                hold on
+            end
+        end
         xlim([min(frq) max(frq)])
         xlabel('Frequency (kHz)')
         ylabel('dB SPL')            
@@ -1600,6 +1608,7 @@ NoiseVPeakTDT
                 
                 text((max(frq)*i/2)/2,dBlevelStimuli(i),['Stimuli Level = ' mat2str(round(dBlevelStimuli(i)))]);
             end
+            
             xlim([min(frq) max(frq)])
             xlabel('Frequency (kHz)')
             ylabel('dB SPL')
@@ -1669,7 +1678,7 @@ function fNoise = lcfSetfNoiseLevel(fNoise,frq,CriticalRatio,hearingLossSimulati
     end
 
     thresholdBaselineFFT = NLevel*ones(size(frq)); 
-    threshold = 80;
+    threshold = 75;
     if strcmp(hearingLossSimulation,'sHFHL')
         thresholdHearingLossFFT = lcfSimulateHearingLoss(frq);
         thresholdHearingLossFFT = min(thresholdHearingLossFFT,threshold);
