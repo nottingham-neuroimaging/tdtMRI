@@ -83,7 +83,7 @@ function tdtMRI
   dGray = 0.5*ones(1,3);
   ScreenPos = get(0,'ScreenSize');
   FontSize = 13;
-  messageNLines = 9; %number of lines in the message window
+  messageNLines = 7; %number of lines in the message window
 
   rand('twister',sum(100*clock));     
 %     randn('state',sum(100*clock))
