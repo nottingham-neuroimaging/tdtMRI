@@ -616,7 +616,7 @@ YPos = YPos-(editHeight+YGap);
               invoke(RP2,'ConnectRP2','USB',1); %connect to the RP2 via the USB port
               circuitFilename = [pathString '\tdtMRI_RP2.rcx'];
             case tdtOptions{2}
-              invoke(RP2,'ConnectRM1','USB',1); %connect to the RP2 via the USB port
+              invoke(RP2,'ConnectRM1','USB',1); %connect to the RM1 via the USB port
               circuitFilename = [pathString '\tdtMRI_RM1.rcx'];
           end
           invoke(RP2,'ClearCOF');
