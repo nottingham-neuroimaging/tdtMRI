@@ -1112,6 +1112,9 @@ YPos = YPos-(editHeight+YGap);
     
     totalSignal = zeros(2,length(stimulus)*totalSamples);
     for iStim = 1:length(stimulus)
+      if ~isfield(stimulus(iStim),'amFrequency')
+        stimulus(iStim).amFrequency = AMfrequency*ones(size(stimulus(iStim).frequency));
+      end
       if any(any(diff([size(stimulus(iStim).frequency);size(stimulus(iStim).bandwidth);size(stimulus(iStim).level);size(stimulus(iStim).duration)])))
         error('(makeSignal) Mismatching dimensions in signal parameters')
       end
@@ -1129,7 +1132,7 @@ YPos = YPos-(editHeight+YGap);
       for i = 1:size(stimulus(iStim).frequency,1)
         for j = 1:size(stimulus(iStim).frequency,2)
           if ~isnan(stimulus(iStim).frequency(i,j)) && ~isnan(stimulus(iStim).bandwidth(i,j)) && ~isnan(stimulus(iStim).level(i,j))
-            thisSignal = makeNoiseBand(stimulus(iStim).frequency(i,j),stimulus(iStim).bandwidth(i,j),samples(i,j)+Gate);
+            thisSignal = makeNoiseBand(stimulus(iStim).frequency(i,j),stimulus(iStim).bandwidth(i,j),stimulus(iStim).amFrequency(i,j),samples(i,j)+Gate);
             thisSignal(1,:) = thisSignal(1,:).*10^((stimulus(iStim).level(i,j)+calibrationGainLeft)/20);  
             thisSignal(2,:) = thisSignal(2,:).*10^((stimulus(iStim).level(i,j)+calibrationGainRight)/20);  
             signal(1,currentSample+(1:samples(i,j)+Gate))= signal(1,currentSample+(1:samples(i,j)+Gate))+lcfGate(thisSignal(1,:),Gate);
@@ -1158,9 +1161,9 @@ YPos = YPos-(editHeight+YGap);
   end
   
   % ********** makeNoiseBand **********
-  function noise = makeNoiseBand(FSig,BW,N)
+  function noise = makeNoiseBand(FSig,BW,AMod,N)
     
-    AMod = AMfrequency/1000; %Amplitude modulation
+    AMod = AMod/1000;  %Mmplitude modulation in kHz
     if isinf(BW)    %if bandwidth is infinite, make an equally-exciting noise
       noise=lcfMakeNoise(N,sampleDuration,AMod);
     elseif BW==0    %if bandwith=0, make a pure tone
