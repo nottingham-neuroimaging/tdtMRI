@@ -98,15 +98,19 @@ function tdtMRI
 
   tdtOptions = {'RP2-HB7','RM1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
   TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
-  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'None'};
-  headphones = headphonesOptions{4};
+  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'S14 AUB (518)', 'None'};
+  headphones = headphonesOptions{6};
   displaySounds = false;
   if isempty(which('spectrogram')) %if there is no processing toolbox, use the alternative spectrogram function
     spectrogramFunction = @spectrogram2;
   else
     spectrogramFunction = @spectrogram;
   end
-  maxVoltage = 10; %saturation voltage of TDT
+  if isequal(TDT, tdtOptions{2})
+    maxVoltage = 1; %saturation voltage of TDT RM1
+  else
+    maxVoltage = 10; %saturation voltage of TDT HB7
+  end
   if ismember(TDT,tdtOptions(1:2))
     getTagValDelay = 500; % the approximate time it takes to get values from the RP2 (in msec)
   else
@@ -653,9 +657,18 @@ YPos = YPos-(editHeight+YGap);
           end
           signalBufferMaxSize = invoke(RP2,'GetTagVal','SignalBufSize'); % this is the signal buffer size at circuit compilation
           noiseBufferSize = invoke(RP2,'GetTagVal','NoiseBufSize');   %get the noise buffer size                
+          getTagValDelay = 500; % the approximate time it takes to get values from the RP2 (in msec)
+
         else
           displayMessage({'Not using TDT'});
           noiseBufferSize=261900;
+          getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
+        end
+        
+        if isequal(TDT, tdtOptions{2})
+          maxVoltage = 1; %saturation voltage of TDT RM1
+        else
+          maxVoltage = 10; %saturation voltage of TDT HB7
         end
         
         displayMessage({''})
@@ -799,15 +812,23 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileRight = 'S14_396insertsRightFFT.csv';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (measured on 08/03/2016)
             
           case 'S14 BRAMS (335)' %(assumes that these earphones are driven with the TDT RM1)
-            calibrationLevelLeft = 101.0; % calibration 17/06/2016 left side with RM1  
+            calibrationLevelLeft = 101.0; % calibration 17/06/2016 left side with RM1  (at what voltage? 1V?)
             calibrationLevelRight = 101.6; % calibration 17/06/2016 right side with RM1
             transferFunctionFileLeft = 'EQF_335L.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
             transferFunctionFileRight = 'EQF_335R.bin';  %csv file containing the impulse reponse of the BRAMS S14 insert earphones (provided by vendor)
             transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             
+          case 'S14 AUB (518)' %(assumes that these earphones are driven with the TDT RM1 and amplified using a Headpod4 amplifier set to half-maximum (?) output)
+            calibrationLevelLeft = 87.8983 + 10*log10(10); % 87.8983 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 84.53101 + 10*log10(10); % 84.53101 dB SPL for a 1 kHz tone at 0.1V  
+            transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+            transferFunctionFileLeft = 'S14_518insertsLeftFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
+            transferFunctionFileRight = 'S14_518insertsRightFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
+            
           case 'None'
-%             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphonesplugged to the TDT HB7 driver.
+%             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphones plugged to the TDT HB7 driver.
 %             calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
             calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
             calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
@@ -836,8 +857,8 @@ YPos = YPos-(editHeight+YGap);
         %load insert transfer inverse filter parameters
         if ~strcmp(headphones,'None')
 %           transferFunction=loadInsertsTransfer([fileparts(which('tdtMRI')) '/' transferFunctionFile],noiseBufferSize,sampleDuration);
-          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft]);
-          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight]);
+          transferFunction=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileLeft],0.5/sampleDuration);
+          transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight],0.5/sampleDuration);
         end
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
@@ -846,7 +867,7 @@ YPos = YPos-(editHeight+YGap);
           %attenuate/increase level to fill 90% of voltage range
           scaling = maxVoltage*0.9/max(max(fNoise));
           %write background noise to TDT
-          invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/10*2^15));  % fill the noise buffer with 16-bit integers           
+          invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/maxVoltage*2^15));  % fill the noise buffer with 16-bit integers           
           invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
           invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
@@ -968,7 +989,8 @@ YPos = YPos-(editHeight+YGap);
       hCursorT=[];
       hCursorF=[];
     end
-
+    hClipWarning = checkSignalLevel(signal,hClipWarning);
+    
     % wait for RP2 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
     while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
       pause(0.05) % leave a chance to user to press a button
@@ -1283,10 +1305,15 @@ YPos = YPos-(editHeight+YGap);
   % ***** lcfInvNErb *****
   function hClipWarning = checkSignalLevel(signal,hClipWarning)
     if max(max(signal))>maxVoltage
-      %find which TDT attenuation setting would solve the problem
-      newHB7Gain = HB7Gain + 3*ceil(20*(log10(max(max(signal))/maxVoltage))/3);
+      if isequal(TDT, tdtOptions{1})
+        %find which TDT attenuation setting would solve the problem
+        newHB7Gain = HB7Gain + 3*ceil(20*(log10(max(max(signal))/maxVoltage))/3);
+        string = ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.'];
+      else
+        string = 'Recalibrate using higher amplification and restart the application.';
+      end
       hClipWarning = text(TDTcycle/1000/2,0,{['TDT AMPLITUDE > ' num2str(maxVoltage) 'V !!!'],...
-                                       ['Set TDT HB7 Gain to ' num2str(newHB7Gain) 'dB and restart the application.']},...
+                                       string},...
                      'parent',hTimeseries,'FontWeight','bold','color','red','horizontalAlignment','center');
     else
       if ishandle(hClipWarning)
@@ -1308,19 +1335,18 @@ YPos = YPos-(editHeight+YGap);
     
     % threshold value - inverting the transfer function for large negative
     % values results in a greater dynamic range than the system can handle.
-    threshold = -50;
+    threshold = -40;
     for i=1:2
 
-        insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)),'spline');
+        insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)));% DO NOT USE ,'spline'); % because results in unpredictible values if transfer function has not been recorded at enough frequencies
         insertsFFT(insertsFFT<threshold) = threshold;
         insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
-        
-        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
-        %       subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
-        %       subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
-        %       figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
-        %       subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
-        %       subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
+%               figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
+%               subplot(3,1,2);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,insertsFFT);
+%               subplot(3,1,3);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)./10.^(insertsFFT/20)));
+%               figure;subplot(3,1,1);plot((0:length(insertsFFT)-1),abs(fft(noise)));
+%               subplot(3,1,2);plot((0:length(insertsFFT)-1),insertsFFT);
+%               subplot(3,1,3);plot((0:length(insertsFFT)-1),abs(fft(noise(i,:))./10.^(insertsFFT/20)));
         
         noise(i,:) = real(ifft(fft(noise(i,:))./10.^(insertsFFT/20)));
         

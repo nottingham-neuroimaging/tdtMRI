@@ -1,15 +1,46 @@
-function tf = loadTransferFunction(filename)
+function tf = loadTransferFunction(filename,maxFrequency)
 
 [path,file,extension] = fileparts(filename);
 switch(extension)
   case '.csv'  % transfer functions measured using IHR Brüel&Kjær microphone and 2cc coupler
-    ffts = csvread(filename,29,1);
-    ffts = ffts(:,1:end-3); %remove last 3 columns corresponding to two different weighted averages and an empty column
+               % or measured using AUB PCB microphone and 2 cc coupler and TDT SigCalRP 
+    try
+      ffts = csvread(filename,29,1); % if any non-numeric data are found, this will fail and go in the catch statement below
+      %if it works, it is a file from an IHR calibration
+      ffts = ffts(:,1:end-3); %remove last 3 columns corresponding to two different weighted averages and an empty column
 
-    tf.frequencies = (0:size(ffts,2)-1)*(20000/(size(ffts,2)-1)); % Frequency step size based on number of sample points
-    tf.frequencies = tf.frequencies/1000; %convert to kHz
-    tf.fft = mean(ffts(6:end,:));
-    tf.fft = conv(tf.fft,ones(1,20)/20,'same');    
+      tf.frequencies = (0:size(ffts,2)-1)*(20000/(size(ffts,2)-1)); % Frequency step size based on number of sample points
+      tf.frequencies = tf.frequencies/1000; %convert to kHz
+      tf.fft = mean(ffts(6:end,:));
+      tf.fft = conv(tf.fft,ones(1,20)/20,'same');    
+    catch %it is doesn't, it is an AUB calibration file
+      % read CSV file
+      fid = fopen(filename, 'rt');
+      x = fread(fid, inf, '*char');
+      fclose(fid);
+
+      x = x(:)';
+      lines = regexp(x, newline, 'split');
+      l1 = lines{1};
+
+      parts = regexp(l1, char(44), 'split');
+      test_signal = parts{end};
+      temp = str2double(regexp(test_signal, '\d+.\d+', 'match'));
+
+      calib_V = temp(1);
+      calib_dB = temp(2);
+
+      tf.frequencies = [];
+      tf.fft = [];
+      for i = 2:length(lines)-1
+          parts = regexp(lines{i}, char(44), 'split');
+          tf.frequencies = [tf.frequencies; str2double(parts{1})];
+          tf.fft = [tf.fft; str2double(parts{3})];
+      end
+      %convert to kHz
+      tf.frequencies = tf.frequencies/1000;
+    end
+
       
   case '.mat'  %transfer functions measured using Kemar microphone at BRAMS
     tf = load(filename);
@@ -46,3 +77,18 @@ tf.fft = tf.fft - tf.fft(f1kHz);
 % %cap at minAttenuation dB
 % minAttenuation = -20;
 % tf.fft(tf.fft<minAttenuation) = minAttenuation;
+
+%this is to avoid problems with interpolating the function to match the fft of the synthesized sounds:
+if tf.frequencies(1) > 0 %if there is no 0Hz attenuation
+  % force it to equal the attenuation at the smallest frequency measured
+  tf.frequencies = [0; tf.frequencies];
+  tf.fft = [tf.fft(1); tf.fft];
+end
+if tf.frequencies(end)< maxFrequency %if there is no attenuation above the max frequency of the synthesized sounds
+  %set it to the attenuation value of the largest frequency measured
+  tf.frequencies = [tf.frequencies; maxFrequency];
+  tf.fft = [tf.fft; tf.fft(end)];
+end
+
+% figure('name',file);
+% plot(tf.frequencies,tf.fft);
