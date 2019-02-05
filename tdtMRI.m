@@ -819,14 +819,30 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             
-          case 'S14 AUB (518)' %(assumes that these earphones are driven with the TDT RM1 and amplified using a Headpod4 amplifier set to half-maximum (?) output)
-            calibrationLevelLeft = 87.8983 + 10*log10(10); % 87.8983 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 84.53101 + 10*log10(10); % 84.53101 dB SPL for a 1 kHz tone at 0.1V  
+          case 'S14 AUB (518)' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
             transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+            % with Headpod4 amplifier set to half-maximum, multiplicative steps
+            calibrationLevelLeft = 87.8983 + 10*log10(10); % 87.8983 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 84.53101 + 10*log10(10); % 84.53101 dB SPL for a 1 kHz tone at 0.1V  
             transferFunctionFileLeft = 'S14_518insertsLeftFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
             transferFunctionFileRight = 'S14_518insertsRightFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
-            
+            % with Headpod4 amplifier set to half-maximum, additive steps
+            calibrationLevelLeft = 87.9 + 10*log10(10); % 87.9 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 84.7066 + 10*log10(10); % 84.7066 dB SPL for a 1 kHz tone at 0.1V  
+            transferFunctionFileLeft = 'S14_518insertsLeft_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+            transferFunctionFileRight = 'S14_518insertsRight_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+            % with Headpod4 amplifier set to three-quarter-maximum, additive steps
+            calibrationLevelLeft = 94.7129 + 10*log10(10); % 94.7129 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 91.756 + 10*log10(10); % 91.756 dB SPL for a 1 kHz tone at 0.1V  
+            transferFunctionFileLeft = 'S14_518insertsLeft_HighAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+            transferFunctionFileRight = 'S14_518insertsRight_HighAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+            % without amplifier, additive steps
+            calibrationLevelLeft = 76.6752 + 10*log10(10); % 76.6752 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 73.3311 + 10*log10(10); % 73.3311 dB SPL for a 1 kHz tone at 0.1V  
+            transferFunctionFileLeft = 'S14_518insertsLeft_NoAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+            transferFunctionFileRight = 'S14_518insertsRight_NoAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+ 
           case 'None'
 %             calibrationLevelLeft = 77.4;   % calibration values from Senheiser headphones plugged to the TDT HB7 driver.
 %             calibrationLevelRight = 81.6;  % Use these as the level of a 1kHz sinewave so that its max voltage is 1 (on the corresponding side)
