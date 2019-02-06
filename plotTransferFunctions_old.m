@@ -1,4 +1,4 @@
-function plotTransferFunctions
+function plotTransferFunctions_old
 
 files = [dir([pwd '\transferFunctions\*clicks_*.csv']);dir([pwd '\transferFunctions\*click_*.mat']);dir([pwd '\transferFunctions\*.bin'])];
 
