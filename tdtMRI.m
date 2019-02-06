@@ -877,7 +877,9 @@ YPos = YPos-(editHeight+YGap);
           transferFunction(2)=loadTransferFunction([fileparts(which('tdtMRI')) '/transferFunctions/' transferFunctionFileRight],0.5/sampleDuration);
         end
         
-        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise   
+        fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise 
+%         sqrt(mean(fNoise'.^2))
+        checkSignalLevel(fNoise*10^((NLevel+calibrationGainLeft-LEE)/20),[]);
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
@@ -997,7 +999,6 @@ YPos = YPos-(editHeight+YGap);
     displayMessage({'Waiting for trigger...'});
     currentTrigger = 0;
     nextTrigger = 0;
-    hClipWarning=[];
     
     if displaySounds  
       [hCursorT, hCursorF] = plotSignal(signal);  %plot signal for next stimulus
@@ -1005,7 +1006,7 @@ YPos = YPos-(editHeight+YGap);
       hCursorT=[];
       hCursorF=[];
     end
-    hClipWarning = checkSignalLevel(signal,hClipWarning);
+    hClipWarning = checkSignalLevel(signal,[]);
     
     % wait for RP2 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
     while nextTrigger<= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
