@@ -98,7 +98,8 @@ function tdtMRI
 
   tdtOptions = {'RP2-HB7','RM1','None','Soundcard'};  %If you change the order of these options, changes are needed in code below
   TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
-  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'Sensimetrics S14', 'S14 BRAMS (335)', 'S14 AUB (518)', 'None'};
+  headphonesOptions={'NNL Inserts', 'NNL Headphones', 'Sennheiser HD 212Pro', 'S14  Nottingham (396)', 'S14 BRAMS (335)',...
+                     'S14 AUB (518) Mid Amp', 'S14 AUB (518) High Amp', 'S14 AUB (518) No Amp', 'None'};
   headphones = headphonesOptions{6};
   displaySounds = false;
   if isempty(which('spectrogram')) %if there is no processing toolbox, use the alternative spectrogram function
@@ -803,7 +804,7 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileLeft = 'Senheiser212ProLeftFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
             transferFunctionFileRight = 'Senheiser212ProRightFFT.csv';  %csv file containing the impulse reponse of the Senheiser 212 Pro headphones (measured on 08/03/2016)
             
-          case 'Sensimetrics S14' %(assumes that these earphones are driven with the TDT RP2+HB7)
+          case 'S14  Nottingham (396)' %(assumes that these earphones are driven with the TDT RP2+HB7)
             calibrationLevelLeft = 80.4; % calibration 04/03/2016 left side
             calibrationLevelRight = 78.8; % calibration 04/03/2016 right side
             transferFunctionFileLeft = 'EQF_396L.bin';  %csv file containing the impulse reponse of the Sensimetrics S14 insert earphones (provided by vendor)
@@ -819,27 +820,30 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileLeft = 'S14_335insertsLeftFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             
-          case 'S14 AUB (518)' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
+          case 'S14 AUB (518) Mid Amp' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
             transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
-            % with Headpod4 amplifier set to half-maximum, multiplicative steps
-            calibrationLevelLeft = 87.8983 + 10*log10(10); % 87.8983 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 84.53101 + 10*log10(10); % 84.53101 dB SPL for a 1 kHz tone at 0.1V  
-            transferFunctionFileLeft = 'S14_518insertsLeftFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
-            transferFunctionFileRight = 'S14_518insertsRightFFT.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/11/2018)
             % with Headpod4 amplifier set to half-maximum, additive steps
-            calibrationLevelLeft = 87.9 + 10*log10(10); % 87.9 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 84.7066 + 10*log10(10); % 84.7066 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelLeft = 87.9 + 20*log10(10); % 87.9 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 84.7066 + 20*log10(10); % 84.7066 dB SPL for a 1 kHz tone at 0.1V  
             transferFunctionFileLeft = 'S14_518insertsLeft_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
             transferFunctionFileRight = 'S14_518insertsRight_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+
+          case 'S14 AUB (518) High Amp' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
+            transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             % with Headpod4 amplifier set to three-quarter-maximum, additive steps
-            calibrationLevelLeft = 94.7129 + 10*log10(10); % 94.7129 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 91.756 + 10*log10(10); % 91.756 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelLeft = 94.7129 + 20*log10(10); % 94.7129 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 91.756 + 20*log10(10); % 91.756 dB SPL for a 1 kHz tone at 0.1V  
             transferFunctionFileLeft = 'S14_518insertsLeft_HighAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
             transferFunctionFileRight = 'S14_518insertsRight_HighAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
+
+          case 'S14 AUB (518) No Amp' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
+            transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+            transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             % without amplifier, additive steps
-            calibrationLevelLeft = 76.6752 + 10*log10(10); % 76.6752 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 73.3311 + 10*log10(10); % 73.3311 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelLeft = 76.6752 + 20*log10(10); % 76.6752 dB SPL for a 1 kHz tone at 0.1V  
+            calibrationLevelRight = 73.3311 + 20*log10(10); % 73.3311 dB SPL for a 1 kHz tone at 0.1V  
             transferFunctionFileLeft = 'S14_518insertsLeft_NoAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
             transferFunctionFileRight = 'S14_518insertsRight_NoAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
  
