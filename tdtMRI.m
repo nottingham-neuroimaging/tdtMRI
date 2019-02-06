@@ -1150,10 +1150,12 @@ YPos = YPos-(editHeight+YGap);
   function totalSignal = makeSignal(stimulus,totalSamples)
     
     totalSignal = zeros(2,length(stimulus)*totalSamples);
-    for iStim = 1:length(stimulus)
-      if ~isfield(stimulus(iStim),'amFrequency')
+    if ~isfield(stimulus,'amFrequency')
+      for iStim = 1:length(stimulus)
         stimulus(iStim).amFrequency = AMfrequency*ones(size(stimulus(iStim).frequency));
       end
+    end
+    for iStim = 1:length(stimulus)
       if any(any(diff([size(stimulus(iStim).frequency);size(stimulus(iStim).bandwidth);size(stimulus(iStim).level);size(stimulus(iStim).duration)])))
         error('(makeSignal) Mismatching dimensions in signal parameters')
       end
