@@ -1,5 +1,9 @@
 function tf = loadTransferFunction(filename,maxFrequency)
 
+if ~exist('maxFrequency','var') || isempty(maxFrequency)
+  maxFrequency = 0;
+end
+
 [path,file,extension] = fileparts(filename);
 switch(extension)
   case '.csv'  % transfer functions measured using IHR Brüel&Kjær microphone and 2cc coupler
