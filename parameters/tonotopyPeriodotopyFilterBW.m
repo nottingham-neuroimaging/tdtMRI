@@ -15,8 +15,23 @@ function [params,stimulus] = tonotopyPeriodotopyFilterBW(params,NEpochsPerRun,st
 if isNotDefined('params')
   params = struct;
 end
+if fieldIsNotDefined(params,'nAMfrequencies')
+  params.nAMfrequencies = 9; 
+end
+if fieldIsNotDefined(params,'lowAMfrequency')
+  params.lowAMfrequency = 2;
+end
+if fieldIsNotDefined(params,'highAMfrequency')
+  params.highAMfrequency = 512;
+end
+if fieldIsNotDefined(params,'onset')
+  params.onset = 3500;
+end
+if fieldIsNotDefined(params,'level')
+  params.level = 80;
+end
 if fieldIsNotDefined(params,'nFrequencies')
-  params.nFrequencies = 5; 
+  params.nFrequencies = 0; 
 end
 if fieldIsNotDefined(params,'lowFrequency')
   params.lowFrequency = .25;
@@ -24,26 +39,14 @@ end
 if fieldIsNotDefined(params,'highFrequency')
   params.highFrequency = 6;
 end
-if fieldIsNotDefined(params,'nAMfrequencies')
-  params.nAMfrequencies = 5; 
-end
-if fieldIsNotDefined(params,'lowAMfrequency')
-  params.lowAMfrequency = 2;
-end
-if fieldIsNotDefined(params,'highAMfrequency')
-  params.highAMfrequency = 40;
-end
-if fieldIsNotDefined(params,'onset')
-  params.onset = 2500;
-end
 if fieldIsNotDefined(params,'bandwidthERB')
   params.bandwidthERB = 1;
 end
-if fieldIsNotDefined(params,'nPermute')
-  params.nPermute = 14;  %number of events over which to randomly permute
+if fieldIsNotDefined(params,'nPermute')%number of events over which to randomly permute
+  params.nPermute = params.nFrequencies+params.nAMfrequencies;  
 end
-if fieldIsNotDefined(params,'level')
-  params.level = 70;
+if fieldIsNotDefined(params,'nNulls')%number of silences per permutation length (nPermute)
+  params.nNulls = 1;  
 end
 
 if nargout==1
@@ -52,11 +55,13 @@ end
 
 %---------------- enumerate all different conditions
 
-allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
-lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
-highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/2);
-allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
-allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
+if params.nFrequencies
+  allFrequencies = lcfInvNErb(linspace(lcfNErb(params.lowFrequency),lcfNErb(params.highFrequency),params.nFrequencies));
+  lowCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)-params.bandwidthERB/2);
+  highCuttingFrequencies = lcfInvNErb(lcfNErb(allFrequencies)+params.bandwidthERB/2);
+  allFrequencies = (lowCuttingFrequencies+highCuttingFrequencies)/2;
+  allBandwidths = (highCuttingFrequencies-lowCuttingFrequencies);
+end
 
 allAMFrequencies = exp(linspace(log(params.lowAMfrequency), log(params.highAMfrequency), params.nAMfrequencies));
 
@@ -103,12 +108,11 @@ for i = 1:NEpochsPerRun
 end    
 
 sequence2 = [];
-nPermute = 12; %length of sequence chunks to permute
-nNulls = 2; %number of additional silences per chunks
-for i = 1:floor(length(sequence)/nPermute)
-  thisSequence = [sequence((i-1)*nPermute+1:i*nPermute) length(stimulus)*ones(1,nNulls)];
-  sequence2 = [sequence2 thisSequence(randperm(nPermute+nNulls))];
+for i = 1:floor(length(sequence)/params.nPermute)
+  thisSequence = [sequence((i-1)*params.nPermute+1:i*params.nPermute) length(stimulus)*ones(1,params.nNulls)];
+  sequence2 = [sequence2 thisSequence(randperm(params.nPermute+params.nNulls))];
 end    
+sequence2 = [sequence2 sequence(floor(length(sequence)/params.nPermute)*params.nPermute+1:end)];
 
 %---------------------------apply sequence to stimuli
 stimulus = stimulus(sequence2);
