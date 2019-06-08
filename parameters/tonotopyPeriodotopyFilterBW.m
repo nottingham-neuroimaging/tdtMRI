@@ -16,13 +16,13 @@ if isNotDefined('params')
   params = struct;
 end
 if fieldIsNotDefined(params,'nAMfrequencies')
-  params.nAMfrequencies = 9; 
+  params.nAMfrequencies = 8; 
 end
 if fieldIsNotDefined(params,'lowAMfrequency')
   params.lowAMfrequency = 2;
 end
 if fieldIsNotDefined(params,'highAMfrequency')
-  params.highAMfrequency = 512;
+  params.highAMfrequency = 256;
 end
 if fieldIsNotDefined(params,'onset')
   params.onset = 3500;
@@ -43,10 +43,11 @@ if fieldIsNotDefined(params,'bandwidthERB')
   params.bandwidthERB = 1;
 end
 if fieldIsNotDefined(params,'nPermute')%number of events over which to randomly permute
-  params.nPermute = params.nFrequencies+params.nAMfrequencies;  
+%   params.nPermute = params.nFrequencies+params.nAMfrequencies;  
+  params.nPermute = 11;
 end
 if fieldIsNotDefined(params,'nNulls')%number of silences per permutation length (nPermute)
-  params.nNulls = 1;  
+  params.nNulls = 2;  
 end
 
 if nargout==1
