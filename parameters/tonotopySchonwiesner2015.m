@@ -15,10 +15,10 @@ if isNotDefined('params')
   params = struct;
 end
 if fieldIsNotDefined(params,'level')
-  params.level = 75;
+  params.level = 80;
 end
 if fieldIsNotDefined(params,'onset')
-  params.onset=4000; % fixed silence duration in the beginning
+  params.onset=3500; % fixed silence duration in the beginning
 end
 if fieldIsNotDefined(params,'nFrequencies')
   params.nFrequencies = 8;
@@ -35,8 +35,15 @@ end
 if fieldIsNotDefined(params,'highFrequency')
   params.highFrequency = 8;
 end
-if fieldIsNotDefined(params,'nPermute')
-  params.nPermute = 9;  %number of events over which to randomly permute
+% if fieldIsNotDefined(params,'nPermute')
+%   params.nPermute = 6;  %number of events over which to randomly permute
+% end
+if fieldIsNotDefined(params,'nPermute')%number of events over which to randomly permute
+%   params.nPermute = params.nFrequencies+params.nAMfrequencies;  
+  params.nPermute = 11;
+end
+if fieldIsNotDefined(params,'nNulls')%number of silences per permutation length (nPermute)
+  params.nNulls = 2;  
 end
 
 if nargout==1
@@ -81,16 +88,39 @@ end
 
 
 %------------------------------------- sequence randomization
-nPermute = max(1,round(params.nPermute/(params.nFrequencies+1)))*(params.nFrequencies+1);
-nPermutations = floor(NEpochsPerRun*(params.nFrequencies+1)/nPermute);
+% nPermute = max(1,round(params.nPermute/(params.nFrequencies+1)))*(params.nFrequencies+1);
+% nPermute = 15;
+% 
+% nPermutations = floor(NEpochsPerRun*(params.nFrequencies+1)/nPermute);
+% sequence = [];
+% for i = 1:nPermutations
+%   thisSequence = repmat([1:(params.nFrequencies+1)],1,nPermute/(params.nFrequencies+1));
+%   sequence = [sequence thisSequence(randperm(nPermute))];
+% end    
+% 
+% %---------------------------apply sequence to stimuli
+% stimulus = stimulus(sequence);
+% 
+% %------------------------------------- sequence randomization
+% sequence = [];
+% for i = 1:NEpochsPerRun
+%   sequence = [sequence randperm(length(stimulus)-1)];
+% end    
+
 sequence = [];
-for i = 1:nPermutations
-  thisSequence = repmat([1:(params.nFrequencies+1)],1,nPermute/(params.nFrequencies+1));
-  sequence = [sequence thisSequence(randperm(nPermute))];
+for i = 1:NEpochsPerRun
+  sequence = [sequence randperm(length(stimulus)-1)];
 end    
 
+sequence2 = [];
+for i = 1:floor(length(sequence)/params.nPermute)
+  thisSequence = [sequence((i-1)*params.nPermute+1:i*params.nPermute) length(stimulus)*ones(1,params.nNulls)];
+  sequence2 = [sequence2 thisSequence(randperm(params.nPermute+params.nNulls))];
+end    
+sequence2 = [sequence2 sequence(floor(length(sequence)/params.nPermute)*params.nPermute+1:end)];
+
 %---------------------------apply sequence to stimuli
-stimulus = stimulus(sequence);
+stimulus = stimulus(sequence2);
 
 
 function out = isNotDefined(name)
