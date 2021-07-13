@@ -119,8 +119,8 @@ function tdtMRI
   end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 7500;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
-  stimTR = 7500;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
+  TR = 8000;          % the expected delay between image acquisitions (scanner pulses) in milliseconds
+  stimTR = 8000;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
   minTDTcycle = 7000;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
                       % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
                       % before receiving the next one
@@ -133,7 +133,7 @@ function tdtMRI
                       % of each stimulus
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
-  syncTR = 7500;            % delay between simulated scanner pulses
+  syncTR = 8000;            % delay between simulated scanner pulses
   nRepeatsPerRun = 10;       %number of times the set of unique stimuli is repeated in a run
   currentRun=0;    
   completedRuns=0;          %to keep track of completed runs
