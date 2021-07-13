@@ -29,6 +29,9 @@ end
 if fieldIsNotDefined(params,'bandwidthOctave')
   params.bandwidthOctave = 0.0;
 end
+if fieldIsNotDefined(params,'nExtraNulls')%number of extra silences added to beggining and end of full sequence
+  params.nExtraNulls = 3;
+end
 if fieldIsNotDefined(params,'lowFrequency')
   params.lowFrequency = .2;
 end
@@ -117,7 +120,9 @@ for i = 1:floor(length(sequence)/params.nPermute)
   thisSequence = [sequence((i-1)*params.nPermute+1:i*params.nPermute) length(stimulus)*ones(1,params.nNulls)];
   sequence2 = [sequence2 thisSequence(randperm(params.nPermute+params.nNulls))];
 end    
-sequence2 = [sequence2 sequence(floor(length(sequence)/params.nPermute)*params.nPermute+1:end)];
+sequence2 = [length(stimulus)*ones(1,params.nExtraNulls) ...
+             sequence2 sequence(floor(length(sequence)/params.nPermute)*params.nPermute+1:end) ...
+             length(stimulus)*ones(1,params.nExtraNulls)];
 
 %---------------------------apply sequence to stimuli
 stimulus = stimulus(sequence2);
