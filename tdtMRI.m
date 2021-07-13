@@ -134,7 +134,7 @@ function tdtMRI
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
   syncTR = 7500;            % delay between simulated scanner pulses
-  nRepeatsPerRun = 4;       %number of times the set of unique stimuli is repeated in a run
+  nRepeatsPerRun = 10;       %number of times the set of unique stimuli is repeated in a run
   currentRun=0;    
   completedRuns=0;          %to keep track of completed runs
 
@@ -160,6 +160,7 @@ function tdtMRI
   %To account for this, we compute the ratio of the energy within one critical band around 1kHz and the total energy for an
   %equally exciting noise (a noise that stimulates an auditory filter with the same energy)
   LEE = lcfLEE(2^18,1,sampleDuration); 
+  minHearingFrequency = 0.035; %all frequencies below this will be attenuated (this reduces clipping issues)
 
   params = [];              %structure that will contain the numerical parameters to the parameter function
   paramNames = [];          %names of these parameters
@@ -1269,7 +1270,11 @@ YPos = YPos-(editHeight+YGap);
     DF = 1/(sampleDuration*power2N);
     frq = DF*(1:power2N/2); %frequency vector at the frequency resolution given by the signal length
     lev = -10*log10(lcfErb(frq)); %at any frequency, the energy is proportional to the critical bandwidth; this is converted to an attenuation in dB
-    eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient 
+    if nnz(frq<minHearingFrequency)%attenuate frequencies below minimum hearing frequency
+      lev(frq<minHearingFrequency) = min(lev);
+%       lev(frq<minHearingFrequency) = linspace(min(lev),lev(nnz(frq<minHearingFrequency)),nnz(frq<minHearingFrequency));
+    end
+    eeFilter = 10.^(lev/20); %convert to amplification/attenuation coefficient
     % Note that these two last lines are equivalent to eeFilter = 10.^(log10(lcfErb(frq)*-1/2)=lcfErb(frq).^-1/2 = 1/sqrt(lcfErb(frq))
     % which means that the weighting is inversely proportional to the bandwidth when expressed as energy,
     % or to the square root of the bandwidth when expressed as pressure 
@@ -1359,9 +1364,14 @@ YPos = YPos-(editHeight+YGap);
     % threshold value - inverting the transfer function for large negative
     % values results in a greater dynamic range than the system can handle.
     threshold = -40;
+    frq=(0:length(noise)/2-1)/(sampleDuration*length(noise));
     for i=1:2
 
-        insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,(0:length(noise)/2-1)/(sampleDuration*length(noise)));% DO NOT USE ,'spline'); % because results in unpredictible values if transfer function has not been recorded at enough frequencies
+        insertsFFT = interp1(transferFunction(i).frequencies,transferFunction(i).fft,frq);% DO NOT USE ,'spline'); % because results in unpredictible values if transfer function has not been recorded at enough frequencies
+%         insertsFFT(frq<0.05)=0; % DEBUG, COMMENT OUT!
+        if nnz(frq<minHearingFrequency)
+          insertsFFT(frq<minHearingFrequency) = linspace(0,insertsFFT(nnz(frq<minHearingFrequency)),nnz(frq<minHearingFrequency));%do not modify frequencies below minimum hearing frequency
+        end
         insertsFFT(insertsFFT<threshold) = threshold;
         insertsFFT = [insertsFFT insertsFFT(end:-1:1)];
 %               figure;subplot(3,1,1);plot((0:length(insertsFFT)-1)*transferFunction.freqResolution*downsampleFactor,abs(fft(noise)));
