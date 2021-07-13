@@ -33,7 +33,7 @@ if fieldIsNotDefined(params,'onset')
   params.onset = 50;
 end
 if fieldIsNotDefined(params,'level')
-  params.level = 70;
+  params.level = 75;
 end
 
 if nargout==1
