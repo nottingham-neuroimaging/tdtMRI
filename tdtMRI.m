@@ -822,14 +822,18 @@ YPos = YPos-(editHeight+YGap);
             transferFunctionFileRight = 'S14_335insertsRightFFT.mat';  %mat file containing the impulse reponse of the BRAMS S14 insert earphones (measured on 15/06/2016)
             
           case 'S14 AUB (518) Mid Amp' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
-            transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
-            transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+%             transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
+%             transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             % with Headpod4 amplifier set to half-maximum, additive steps
-            calibrationLevelLeft = 87.9 + 20*log10(10); % 87.9 dB SPL for a 1 kHz tone at 0.1V  
-            calibrationLevelRight = 84.7066 + 20*log10(10); % 84.7066 dB SPL for a 1 kHz tone at 0.1V  
+%             calibrationLevelLeft = 87.9 + 20*log10(10); % 87.9 dB SPL for a 1 kHz tone at 0.1V  
+%             calibrationLevelRight = 84.7066 + 20*log10(10); % 84.7066 dB SPL for a 1 kHz tone at 0.1V  
 %             transferFunctionFileLeft = 'S14_518insertsLeft_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
 %             transferFunctionFileRight = 'S14_518insertsRight_MidAmp_Add_average.csv';  %mat file containing the impulse reponse of the AUB S14 insert earphones (measured on 01/02/2018)
-
+              transferFunctionFileLeft = 'S14_Left_Mid_new.csv';
+              transferFunctionFileRight = 'S14_Right_Mid_new.csv';
+              calibrationLevelLeft = 90.7605 + 20*log10(10);
+              calibrationLevelRight = 84.935 + 20*log10(10);
+  
           case 'S14 AUB (518) High Amp' %(assumes that these earphones are driven with the TDT RM1 set to maximum output level and amplified using a Headpod4 amplifier set to half-maximum output)
             transferFunctionFileLeft = 'EQF_518L.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)
             transferFunctionFileRight = 'EQF_518R.bin';  %csv file containing the impulse reponse of the AUB S14 insert earphones (provided by vendor)

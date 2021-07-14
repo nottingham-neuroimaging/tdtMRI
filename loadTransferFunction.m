@@ -1,4 +1,4 @@
-function tf = loadTransferFunction(filename,maxFrequency)
+function tf = loadTransferFunction(filename,center_at_oneKH,maxFrequency)
 
 if ~exist('maxFrequency','var') || isempty(maxFrequency)
   maxFrequency = 0;
@@ -76,8 +76,12 @@ switch(extension)
 
 end
 %centre on 1kHz
-[~,f1kHz] = min(abs(tf.frequencies-1));
-tf.fft = tf.fft - tf.fft(f1kHz);
+
+if center_at_oneKH % Edit by Moussa. Added an option to display the absolute values in dB on the graph.
+  [~,f1kHz] = min(abs(tf.frequencies-1));
+  tf.fft = tf.fft - tf.fft(f1kHz);
+end
+
 % %cap at minAttenuation dB
 % minAttenuation = -20;
 % tf.fft(tf.fft<minAttenuation) = minAttenuation;

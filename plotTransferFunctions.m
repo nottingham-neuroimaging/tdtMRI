@@ -1,4 +1,8 @@
-function plotTransferFunctions
+function plotTransferFunctions(center_at_oneKH)
+
+if nargin == 0 % Added by Moussa. Option to display the absolute values in dB on the graph.
+  center_at_oneKH = true;
+end
 
 [filenames,path] = uigetfile('*.*','multiselect','on');
 
@@ -18,7 +22,7 @@ xlabel('Frequency (kHz)');
 count=0;
 colors = 'bgrmk';
 for iFile = 1:length(filenames)
-  transfer = loadTransferFunction([path filenames{iFile}]);
+  transfer = loadTransferFunction([path filenames{iFile}],center_at_oneKH);
   [~,legends{iFile}] = fileparts(filenames{iFile});
   plot(transfer.frequencies,transfer.fft);
   hold on;
