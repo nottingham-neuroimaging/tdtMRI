@@ -14,20 +14,17 @@ function [params,stimulus] = tonotopySchonwiesner2015(params,NEpochsPerRun,stimT
 if isNotDefined('params')
   params = struct;
 end
-if fieldIsNotDefined(params,'level')
-  params.level = 80;
-end
 if fieldIsNotDefined(params,'onset')
   params.onset=3500; % fixed silence duration in the beginning
+end
+if fieldIsNotDefined(params,'level')
+  params.level = 80;
 end
 if fieldIsNotDefined(params,'nFrequencies')
   params.nFrequencies = 8;
 end
-if fieldIsNotDefined(params,'semitoneJitter')
-  params.semitoneJitter = 1;
-end
-if fieldIsNotDefined(params,'bandwidthOctave')
-  params.bandwidthOctave = 0.0;
+if fieldIsNotDefined(params,'nNulls')%number of silences per permutation length (nPermute)
+  params.nNulls = 2;
 end
 if fieldIsNotDefined(params,'nExtraNulls')%number of extra silences added to beggining and end of full sequence
   params.nExtraNulls = 3;
@@ -45,8 +42,11 @@ if fieldIsNotDefined(params,'nPermute')%number of events over which to randomly 
 %   params.nPermute = params.nFrequencies+params.nAMfrequencies;  
   params.nPermute = 11;
 end
-if fieldIsNotDefined(params,'nNulls')%number of silences per permutation length (nPermute)
-  params.nNulls = 2;  
+if fieldIsNotDefined(params,'semitoneJitter')
+  params.semitoneJitter = 1;
+end
+if fieldIsNotDefined(params,'bandwidthOctave')
+  params.bandwidthOctave = 0.0;
 end
 
 if nargout==1
