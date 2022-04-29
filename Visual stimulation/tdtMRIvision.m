@@ -30,7 +30,7 @@ function tdtMRIvision
 
   tdtOptions = {'RM1','None'};  %If you change the order of these options, changes are needed in code below
   TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
-  displayStim = true;
+  displayStim = false;
   if ismember(TDT,tdtOptions(1:2))
     getTagValDelay = .5; % the approximate time it takes to get values from the RM1 (in sec)
   else
@@ -113,13 +113,13 @@ function tdtMRIvision
   YPos = YPos-(editHeight+YGap);
   uicontrol('Parent',hMainFigure,...                       % TR (expected time between received scanner pulses
       'BackgroundColor',mGray,...                          % this is also the duration of the synthesized sound sequence)
-      'Position',[XPos YPos Width/2 editHeight],...
+      'Position',[XPos YPos Width editHeight],...
       'Style','text',...
       'String','TR (sec):');
   hTR = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
     'Callback',{@mainCallback,'TR'},...
-      'Position',[XPos+(Width+XGap)/2 YPos (Width-XGap)/2 editHeight],...
+      'Position',[XPos+Width+XGap YPos Width editHeight],...
       'String',num2str(TR),...
       'Style','edit');
 
@@ -225,19 +225,20 @@ function tdtMRIvision
       'Position',[XPos 2*YGap 2*Width+XGap YPos-3*YGap],...
       'Style','text');
 
-%%%%%%%%%%%%%%%%% Sound display Windows
+%%%%%%%%%%%%%%%%% Sequence and stimuli display Windows
   windowWidth = 0.4;
-  windowHeight = 0.4;
+  windowHeight = 0.5;
   YGap = 0.05;
   XPos = 0.075;
   YPos = 0.3;
-  hStimuli = axes('Parent',gcf,...
+  hStimulus = axes('Parent',gcf,...
      'Units','normalized',...
      'Position',[XPos YPos windowWidth windowHeight],...
      'FontName','Arial',...
      'FontSize',10,...
      'Box','on');
-  hTimeseries = axes('Parent',gcf,...
+  cla(hStimulus);
+  hSequence = axes('Parent',gcf,...
      'Units','normalized',...
      'Position',[XPos YPos+windowHeight+YGap windowWidth 1-windowHeight-2*YGap-YPos],...
      'FontName','Arial',...
@@ -255,7 +256,7 @@ function tdtMRIvision
     'BackgroundColor',lGray,...
     'Position',[XPos YPos Width buttonHeight], ...
     'Style','checkbox',...
-    'String','Display sounds', ...
+    'String','Display stimuli', ...
     'value',displayStim);
  
   YPos = 0.14;
@@ -384,7 +385,7 @@ function tdtMRIvision
       case('displayStims')
         displayStim=get(handleCaller,'Value');
         if ~displayStim
-%           plotSignal(zeros(1,nStimTRs*signalSize()));
+%           plotSequence(zeros(1,nStimTRs*signalSize()));
         end
         
       case('TDT')
@@ -519,7 +520,13 @@ function tdtMRIvision
           return
         end
         
-        %check that the circuit is running (in case TDT has been turned off)
+        % check that there is a PTB window
+        if ~Screen(window, 'WindowKind')
+          displayMessage({'Restarting Psychtoolbox'});
+          initializePTB();
+        end
+        
+        % check that the circuit is running (in case TDT has been turned off)
         if ismember(TDT,tdtOptions(1)) 
           if ~testRM1()
             mainCallback(handleCaller,[],'StopCircuit');
@@ -529,7 +536,6 @@ function tdtMRIvision
             invoke(RM1,'SetTagVal','SynTR',syncTR/sampleDuration*1000);      %set duration of simulated trigger TR in samples (with a  bit of jitter)    
           end
         end       
-        displayMessage({'Initializing circuit, please wait...'});
         
         lastButtonPressed = 'start run';   %this will be used to check if the run completed without interruption
         currentRun=currentRun+1;
@@ -588,6 +594,8 @@ function tdtMRIvision
         end
         fclose(logFile);
         %update current run in the GUI
+        cla(hSequence);
+        cla(hStimulus)
         strg = get(hCurrentRun,'String'); Idx = strfind(strg,':');
         set(hCurrentRun,'String',[strg(1:Idx) sprintf(' not running (%g completed)', completedRuns)])
         
@@ -624,6 +632,10 @@ function tdtMRIvision
     % Compute stimulus parameters and load images for this run
     [nScans,stimulus,images] = getStimulusSequence();
     nStims = length(stimulus);
+    
+    % display current stimulus in tdtMRI window
+    hCursorT = plotSequence(stimulus);  %show timeline of the differnet blocks
+
     stimulus(nStims+1).onset = stimulus(nStims).onset + stimulus(nStims).duration; % add an extra stimulus to simplify the stimulus while loop
     
     if ismember(TDT,tdtOptions(1))
@@ -674,13 +686,13 @@ function tdtMRIvision
         % Flip screen for new current stimulus and get new timestamp
         timeStim = Screen('Flip', window);
         currentStim = currentStim + 1;
-%           % display current stimulus in tdtMRI window
-%           if displayStim  
-%             [hCursorT, hCursorF] = plotSignal(stimulus(currentStim).filename);  %show current stimulus in tdtMRI window
-%           else
-%             hCursorT=[];
-%             hCursorF=[];
-%           end
+        if displayStim
+          if stimulus(currentStim).imageNum
+            imshow(images{stimulus(currentStim).imageNum},'Parent',hStimulus);
+          else
+            cla(hStimulus);
+          end
+        end
         if currentStim <= nStims
           %print stimulus to log file
           updatelogFile(stimulus(currentStim),currentTrigger,timeStim-timeStart); 
@@ -689,12 +701,18 @@ function tdtMRIvision
         end
         if currentStim < nStims % if this is not the last stimulus
           prepareNextStim(stimulus(currentStim+1),images); % prepare next stimulus (currentStim+1)
-          
         end
       end
         
       %--------- Things that are done on every iteration of the while loop
-
+      
+      if displayStim
+        % update the cursor position to the estimated elapsed time since the start of the signal
+        if ishandle(hCursorT)  % this tends to mess up the timing a bit
+          set(hCursorT,'Xdata',ones(1,2)*(GetSecs-timeStart));
+        end
+      end
+      
       % check the trigger number
       if ismember(TDT,tdtOptions(1)) && currentTrigger<nScans
         nextTrigger=double(invoke(RM1,'GetTagVal','Trigger')); % get the current trial number from TDT (should increase by one each time a trigger is received)
@@ -721,18 +739,6 @@ function tdtMRIvision
         updateTrialInfo(currentTrigger,nScans,stimulus(currentStim).condition,stimulus(currentStim).conditionName);
       end
         
-        % update the cursor position to the estimated elapsed time since the start of the signal
-%         if ishandle(hCursorT)  
-%           set(hCursorT,'Xdata',ones(1,2)*currentTime/1000);
-%           set(hCursorF,'Xdata',ones(1,2)*currentTime/1000);
-%         end
-%         if currentTrigger>0 & ishandle(hCursorT)  % update the cursor position to the estimated elapsed time since the start of the signal
-%           %(leave this single '&' despite what matlab says, otherwise gets an error if 'Display sounds' is checked during playback,
-%           % this is because '&' but not '&&' accepts empty arguments and 'if []' is valid and is equivalent to 'if false')
-%           set(hCursorT,'Xdata',ones(1,2)*currentTime/1000);
-%           set(hCursorF,'Xdata',ones(1,2)*currentTime/1000);
-%         end
-
       if strcmp(lastButtonPressed,'stop run') %if stop has been pressed at that point, 
         break                   %break out of the loop
       end
@@ -749,8 +755,6 @@ function tdtMRIvision
       figure(hMainFigure)
     end
     
-    %erase signal visualisation
-%     plotSignal(zeros(1,nStimTRs*signalSize()));
     updateTrialInfo([],[],[]);
     if ismember(TDT,tdtOptions(1))    %stop stimulus presentation
       invoke(RM1,'SoftTrg',2); %prevents trigger from sending new signal
@@ -787,43 +791,37 @@ function tdtMRIvision
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Display functions
   
-  % ***** plotSignal *****
-  function [hCursorT, hCursorF] = plotSignal(signal)
+  % ***** plotSequence *****
+  function hCursorT = plotSequence(stimulus)
     
-    signal = signal(1,:);
-    time = sampleDuration*(0:length(signal)-1)/1000;
-    hold(hTimeseries,'off');
-    plot(hTimeseries,time,signal,'k')
-    hold(hTimeseries,'on');
-    plot(hTimeseries,[0 TDTcycle/1000],[maxVoltage maxVoltage],'r--');
-    plot(hTimeseries,[0 TDTcycle/1000],-1*[maxVoltage maxVoltage],'r--');
-    hCursorT = plot(hTimeseries,[0 0],get(hTimeseries,'Ylim'),'r');
-    if nStimTRs>1
-      plot(hTimeseries,repmat((1:nStimTRs-1)*stimTR/1000,2,1), repmat(get(hTimeseries,'Ylim')',1,nStimTRs-1),'r:');
+    % find blocks for the different conditions
+    cBlock = 1;
+    blockCondition = 0;
+    blockEnd = 0; % end time of each block
+    for iStim = 1:length(stimulus)
+      if stimulus(iStim).condition == blockCondition(cBlock)
+        blockEnd(cBlock) = blockEnd(cBlock) + stimulus(iStim).duration;
+      else
+        cBlock = cBlock + 1;
+        blockCondition(cBlock) = stimulus(iStim).condition;
+        blockEnd(cBlock) = blockEnd(cBlock-1) + stimulus(iStim).duration;
+        if stimulus(iStim).condition
+          blockNames{stimulus(iStim).condition} = stimulus(iStim).conditionName;
+        end
+      end
     end
-    set(hTimeseries,'XLim',[0 TDTcycle/1000])
-    set(get(hTimeseries,'XLabel'),'String','Time(s)','FontName','Arial','FontSize',10)
-    set(get(hTimeseries,'YLabel'),'String','Amplitude','FontName','Arial','FontSize',10)
-    set(hTimeseries,'XLim',[0 TDTcycle/1000]);
-    title(hTimeseries,'Cursor position is approximate !');
-
-    [specg,frq,t] = spectrogramFunction(signal,round(100/sampleDuration),round(80/sampleDuration),round(50/sampleDuration),1000/sampleDuration);
-    hold(hStimuli,'off');
-    surf(hStimuli,t,frq,10*log10(abs(specg)),'EdgeColor','none');
-    hold(hStimuli,'on');
-    grid(hStimuli,'off');
-    box(hStimuli,'on');
-    view(hStimuli,0,90); 
-    axis(hStimuli,'tight'); 
-    colormap(hStimuli,jet); 
-    hCursorF = plot(hStimuli,[0 0],get(hStimuli,'Ylim'),'k');
-    set(hStimuli,'XLim',[0 TDTcycle/1000]);
-    if nStimTRs>1
-      plot(hStimuli,repmat((1:nStimTRs-1)*stimTR/1000,2,1), repmat(get(hStimuli,'Ylim')',1,nStimTRs-1),'k:');
+    
+    hold(hSequence,'on');
+    for iBlock = 1:length(blockCondition)
+      if blockCondition(iBlock)
+        hBlock(blockCondition(iBlock)) = patch([blockEnd(iBlock-1) blockEnd(iBlock-1) blockEnd(iBlock) blockEnd(iBlock)],[0 1 1 0],blockCondition(iBlock));
+      end
     end
-    set(get(hStimuli,'XLabel'),'String','Time (s)','FontName','Arial','FontSize',10)
-    set(get(hStimuli,'YLabel'),'String','Frequency (Hz)','FontName','Arial','FontSize',10)
-
+    hCursorT = plot(hSequence,[0 0],[0 1],'r');
+%     set(hTimeseries,'YLim',[0 1])
+    set(get(hSequence,'XLabel'),'String','Time(s)','FontName','Arial','FontSize',10)
+    set(get(hSequence,'YLabel'),'String','','FontName','Arial','FontSize',10)
+    legend(hBlock,blockNames,'Location','eastoutside');
   end
 
   % ***** scansToMinutes *****
