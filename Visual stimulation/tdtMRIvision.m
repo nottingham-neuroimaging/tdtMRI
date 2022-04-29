@@ -62,7 +62,8 @@ function tdtMRIvision
   HActX = [];      % handle to the activeX figure (invisible)
   circuitRunning=false;   
   
-  startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen (not currently working)
+  startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen
+  screenNumber = [];
   window = []; % Window pointer for PTB3
   windowRect = [];
   grey = 0.5;
@@ -87,7 +88,7 @@ function tdtMRIvision
       'DefaultUicontrolFontName','Arial',...
       'DefaultUicontrolUnits','normalized',...
       'closeRequestFcn',{@mainCallback,'QuitExp'});
-
+  
   Width = 0.2;
   editHeight = 0.035;
   XGap = 0.025;
@@ -228,23 +229,24 @@ function tdtMRIvision
 %%%%%%%%%%%%%%%%% Sequence and stimuli display Windows
   windowWidth = 0.4;
   windowHeight = 0.5;
-  YGap = 0.05;
+  YGap = 0.07;
   XPos = 0.075;
-  YPos = 0.3;
+  YPos = 0.27;
   hStimulus = axes('Parent',gcf,...
      'Units','normalized',...
      'Position',[XPos YPos windowWidth windowHeight],...
      'FontName','Arial',...
      'FontSize',10,...
      'Box','on');
-  cla(hStimulus);
+  set(hStimulus,'Color','none','XColor', 'none','YColor','none')
+  
   hSequence = axes('Parent',gcf,...
      'Units','normalized',...
      'Position',[XPos YPos+windowHeight+YGap windowWidth 1-windowHeight-2*YGap-YPos],...
      'FontName','Arial',...
      'FontSize',10,...
      'Box','on');
-
+  set(hSequence,'Color','none','YColor','none')
 
   XGap = 0.025;
   YGap = 0.0075;
@@ -649,7 +651,7 @@ function tdtMRIvision
     end
     
     Screen('TextSize',window, 50);
-    DrawFormattedText(window,'Waiting for scanner...','center','center',1,[],true);
+    DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],true);
     Screen('Flip', window);
     
     prepareNextStim(stimulus(1),images); % Prepare first stimulus
@@ -960,12 +962,12 @@ function tdtMRIvision
 
   function initializePTB
     
-    PsychDefaultSetup(2); % default settings
+    PsychDefaultSetup(1); % default settings
     Screen('Preference', 'SkipSyncTests', 1);
     screenNumber = max(Screen('Screens')); % Screen number of external display
     grey = WhiteIndex(screenNumber) / 2;
-    [window, windowRect] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
-    ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
+    [window, windowRect] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
+%     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
     % bring GUI back on top after setting up PTB
     figure(hMainFigure)
