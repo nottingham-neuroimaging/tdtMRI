@@ -425,55 +425,58 @@ function tdtMRIvision
         
       case('StartCircuit')    
 
-        if ismember(TDT,tdtOptions(1))
-          displayMessage({'Creating TDT ActiveX interface...'})
-          HActX = figure('position',[0.2*ScreenPos(3)/100 (75+2.25)*ScreenPos(4)/100 (100-0.4)*ScreenPos(3)/100 (25-4.3)*ScreenPos(4)/100],...
-              'menubar','none',...
-              'numbertitle','off',...
-              'name','TDT ActiveX Interface',...
-              'visible','off');
-          pos = get(HActX,'Position');
-
-          RM1 = actxcontrol('RPco.x',pos,HActX);  %create an activeX control for TDT RM1
-          switch(TDT)
-            case tdtOptions{1} % RM1
-              invoke(RM1,'ConnectRM1','USB',1); %connect to the RM1 via the USB port
-              circuitFilename = [pathString '\tdtMRIvision_RM1.rcx'];
-          end
-          invoke(RM1,'ClearCOF');
-          if ~exist(circuitFilename,'file') %check that the circuit object file exists
-              displayMessage({sprintf('==> Cannot find circuit %s',circuitFilename)});
-              return
-          end
-          invoke(RM1,'LoadCOF',circuitFilename);  %load the circuit
-          invoke(RM1,'Run');  %start the circuit
-          if ~testRM1() %test if the circuit is running properly
-            delete(HActX) %if not, delete the activeX figure
-            return
-          else
-            displayMessage({'TDT circuit loaded and running!'})
-          end
-          
-          getTagValDelay = 500; % the approximate time it takes to get values from the RM1 (in msec)
-
-        else
-          displayMessage({'Not using TDT'});
-          getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
-        end
-        
         if startPTBwithCircuit
           displayMessage({'Starting Psychtoolbox'});
-          initializePTB();
+          success = initializePTB();
+        else
+          success = true;
         end
         
-        displayMessage({''})
-        circuitRunning = true; %to check if the circuit is supposed to be running from outside this function
-        set(hStartCircuit,'Enable','off')
-        set(hStartRun,'Enable','on')
-        set(hStopCircuit,'Enable','on')
-        set(hTDT,'Enable','off')
-        displayMessage({'Proceed by pressing <Start run> ...'});
-        
+        if success
+          if ismember(TDT,tdtOptions(1))
+            displayMessage({'Creating TDT ActiveX interface...'})
+            HActX = figure('position',[0.2*ScreenPos(3)/100 (75+2.25)*ScreenPos(4)/100 (100-0.4)*ScreenPos(3)/100 (25-4.3)*ScreenPos(4)/100],...
+                'menubar','none',...
+                'numbertitle','off',...
+                'name','TDT ActiveX Interface',...
+                'visible','off');
+            pos = get(HActX,'Position');
+
+            RM1 = actxcontrol('RPco.x',pos,HActX);  %create an activeX control for TDT RM1
+            switch(TDT)
+              case tdtOptions{1} % RM1
+                invoke(RM1,'ConnectRM1','USB',1); %connect to the RM1 via the USB port
+                circuitFilename = [pathString '\tdtMRIvision_RM1.rcx'];
+            end
+            invoke(RM1,'ClearCOF');
+            if ~exist(circuitFilename,'file') %check that the circuit object file exists
+                displayMessage({sprintf('==> Cannot find circuit %s',circuitFilename)});
+                return
+            end
+            invoke(RM1,'LoadCOF',circuitFilename);  %load the circuit
+            invoke(RM1,'Run');  %start the circuit
+            if ~testRM1() %test if the circuit is running properly
+              delete(HActX) %if not, delete the activeX figure
+              return
+            else
+              displayMessage({'TDT circuit loaded and running!'})
+            end
+
+            getTagValDelay = 500; % the approximate time it takes to get values from the RM1 (in msec)
+
+          else
+            displayMessage({'Not using TDT'});
+            getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
+          end
+
+          displayMessage({''})
+          circuitRunning = true; %to check if the circuit is supposed to be running from outside this function
+          set(hStartCircuit,'Enable','off')
+          set(hStartRun,'Enable','on')
+          set(hStopCircuit,'Enable','on')
+          set(hTDT,'Enable','off')
+          displayMessage({'Proceed by pressing <Start run> ...'});
+        end        
 
       case('StopCircuit')
         if ismember(TDT,tdtOptions(1)) && circuitRunning
@@ -497,7 +500,9 @@ function tdtMRIvision
         circuitRunning = false;
         
         if startPTBwithCircuit
-          sca; %close PTB3 window
+          try
+            sca; %close PTB3 window
+          end
           figure(hMainFigure)% bring GUI back on top
         end
           
@@ -631,145 +636,149 @@ function tdtMRIvision
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ***** lcfOneRun *****
   function lcfOneRun
 
-    % Compute stimulus parameters and load images for this run
-    [nScans,stimulus,images] = getStimulusSequence();
-    nStims = length(stimulus);
-    
-    % display current stimulus in tdtMRI window
-    hCursorT = plotSequence(stimulus);  %show timeline of the differnet blocks
-
-    stimulus(nStims+1).onset = stimulus(nStims).onset + stimulus(nStims).duration; % add an extra stimulus to simplify the stimulus while loop
-    
-    if ismember(TDT,tdtOptions(1))
-      invoke(RM1,'SetTagVal','NTrials',nStims+1);     %set this to something larger than the number of dynamic scans
-      invoke(RM1,'SoftTrg',1);                                  %start run
-    end
-    
     if ~startPTBwithCircuit
-        displayMessage({'Starting Psychtoolbox'});
-        initializePTB();
+      displayMessage({'Starting Psychtoolbox'});
+      success = initializePTB();
+    else
+      success = true;
     end
     
-    Screen('TextSize',window, 50);
-    DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],true);
-    Screen('Flip', window);
-    
-    prepareNextStim(stimulus(1),images); % Prepare first stimulus
-   
-    displayMessage({'Waiting for trigger...'});
-    if strcmp(TDT,tdtOptions(2))
-      displayMessage({'(Trigger = Alt or Shift key)'});
-    end
-    
-    % wait for RM1 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
-    currentTrigger = 0;
-    nextTrigger = 0;
-    while nextTrigger <= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
-      pause(0.01); % leave a chance to user to press a button in the GUI
-      switch(TDT)
-        case tdtOptions(1)
-          nextTrigger = double(invoke(RM1,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
-        case tdtOptions(2)
-          nextTrigger = currentTrigger + KbCheck; %if no TDT RM1 is running, check the keyboard
+    if success
+      % Compute stimulus parameters and load images for this run
+      [nScans,stimulus,images] = getStimulusSequence();
+      nStims = length(stimulus);
+
+      % display current stimulus in tdtMRI window
+      hCursorT = plotSequence(stimulus);  %show timeline of the differnet blocks
+
+      stimulus(nStims+1).onset = stimulus(nStims).onset + stimulus(nStims).duration; % add an extra stimulus to simplify the stimulus while loop
+
+      if ismember(TDT,tdtOptions(1))
+        invoke(RM1,'SetTagVal','NTrials',nStims+1);     %set this to something larger than the number of dynamic scans
+        invoke(RM1,'SoftTrg',1);                                  %start run
       end
-    end
-    timeStart = GetSecs;
-    currentTrigger = nextTrigger;
-    if ~strcmp(lastButtonPressed,'stop run')
-      displayMessage({'Received trigger'});
-    end
-   
-    %Main loop
-    currentStim = 0;
-    while currentTrigger <= nScans && currentStim <= nStims && ~strcmp(lastButtonPressed,'stop run')
-      
-      %--------- Things that are done only for each new stimulus
-      if (GetSecs - timeStart) > stimulus(currentStim+1).onset % one frame before the onset of the next stimulus
-        % Flip screen for new current stimulus and get new timestamp
-        timeStim = Screen('Flip', window);
-        currentStim = currentStim + 1;
-        if displayStim
-          if stimulus(currentStim).imageNum
-            imshow(images{stimulus(currentStim).imageNum},'Parent',hStimulus);
-          else
-            cla(hStimulus);
+
+      Screen('TextSize',window, 50);
+      DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],true);
+      Screen('Flip', window);
+
+      prepareNextStim(stimulus(1),images); % Prepare first stimulus
+
+      displayMessage({'Waiting for trigger...'});
+      if strcmp(TDT,tdtOptions(2))
+        displayMessage({'(Trigger = Alt or Shift key)'});
+      end
+
+      % wait for RM1 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
+      currentTrigger = 0;
+      nextTrigger = 0;
+      while nextTrigger <= currentTrigger && ~strcmp(lastButtonPressed,'stop run')
+        pause(0.01); % leave a chance to user to press a button in the GUI
+        switch(TDT)
+          case tdtOptions(1)
+            nextTrigger = double(invoke(RM1,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
+          case tdtOptions(2)
+            nextTrigger = currentTrigger + KbCheck; %if no TDT RM1 is running, check the keyboard
+        end
+      end
+      timeStart = GetSecs;
+      currentTrigger = nextTrigger;
+      if ~strcmp(lastButtonPressed,'stop run')
+        displayMessage({'Received trigger'});
+      end
+
+      %Main loop
+      currentStim = 0;
+      while currentTrigger <= nScans && currentStim <= nStims && ~strcmp(lastButtonPressed,'stop run')
+
+        %--------- Things that are done only for each new stimulus
+        if (GetSecs - timeStart) > stimulus(currentStim+1).onset % one frame before the onset of the next stimulus
+          % Flip screen for new current stimulus and get new timestamp
+          timeStim = Screen('Flip', window);
+          currentStim = currentStim + 1;
+          if displayStim
+            if stimulus(currentStim).imageNum
+              imshow(images{stimulus(currentStim).imageNum},'Parent',hStimulus);
+            else
+              cla(hStimulus);
+            end
+          end
+          if currentStim <= nStims
+            %print stimulus to log file
+            updatelogFile(stimulus(currentStim),currentTrigger,timeStim-timeStart); 
+            %update current condition information
+            updateTrialInfo(currentTrigger,nScans,stimulus(currentStim).condition,stimulus(currentStim).conditionName);
+          end
+          if currentStim < nStims % if this is not the last stimulus
+            prepareNextStim(stimulus(currentStim+1),images); % prepare next stimulus (currentStim+1)
           end
         end
-        if currentStim <= nStims
-          %print stimulus to log file
-          updatelogFile(stimulus(currentStim),currentTrigger,timeStim-timeStart); 
+
+        %--------- Things that are done on every iteration of the while loop
+
+        if displayStim
+          % update the cursor position to the estimated elapsed time since the start of the signal
+          if ishandle(hCursorT)  % this tends to mess up the timing a bit
+            set(hCursorT,'Xdata',ones(1,2)*(GetSecs-timeStart));
+          end
+        end
+
+        % check the trigger number
+        if ismember(TDT,tdtOptions(1)) && currentTrigger<nScans
+          nextTrigger=double(invoke(RM1,'GetTagVal','Trigger')); % get the current trial number from TDT (should increase by one each time a trigger is received)
+        else %or if there is no TDT running (or it is the last scan), see if the keyboard has been pressed
+          WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by several successive iterations of the loop
+          nextTrigger=currentTrigger + KbCheck; 
+        end
+
+        % if we got the trigger for the next stimulus, check that it's at the predicted time
+        if nextTrigger==currentTrigger+1
+          actualTriggerTime = GetSecs-timeStart; % this should be delayed by the same .5s delay when using the TDT
+          expectedTriggerTime = (nextTrigger-1)*TR; % relative to the time of the first trigger
+          currentTrigger = nextTrigger;
+          if actualTriggerTime <  expectedTriggerTime - triggerTolerance % stimulus was presented too early
+            beep;
+            displayMessage({sprintf('Trigger is early!! %f < %f',actualTriggerTime,expectedTriggerTime)});
+          elseif actualTriggerTime > expectedTriggerTime + triggerTolerance % stimulus is presented too late
+            beep;
+            displayMessage({sprintf('Trigger is late!! %f > %f)',actualTriggerTime,expectedTriggerTime)});
+          elseif ismember(TDT,tdtOptions(2))
+            displayMessage({sprintf('Spot on!! %f ~= %f)',actualTriggerTime,expectedTriggerTime)});
+          end
           %update current condition information
           updateTrialInfo(currentTrigger,nScans,stimulus(currentStim).condition,stimulus(currentStim).conditionName);
         end
-        if currentStim < nStims % if this is not the last stimulus
-          prepareNextStim(stimulus(currentStim+1),images); % prepare next stimulus (currentStim+1)
+
+        if strcmp(lastButtonPressed,'stop run') %if stop has been pressed at that point, 
+          break                   %break out of the loop
         end
-      end
-        
-      %--------- Things that are done on every iteration of the while loop
-      
-      if displayStim
-        % update the cursor position to the estimated elapsed time since the start of the signal
-        if ishandle(hCursorT)  % this tends to mess up the timing a bit
-          set(hCursorT,'Xdata',ones(1,2)*(GetSecs-timeStart));
-        end
-      end
-      
-      % check the trigger number
-      if ismember(TDT,tdtOptions(1)) && currentTrigger<nScans
-        nextTrigger=double(invoke(RM1,'GetTagVal','Trigger')); % get the current trial number from TDT (should increase by one each time a trigger is received)
-      else %or if there is no TDT running (or it is the last scan), see if the keyboard has been pressed
-        WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by several successive iterations of the loop
-        nextTrigger=currentTrigger + KbCheck; 
+
       end
 
-      % if we got the trigger for the next stimulus, check that it's at the predicted time
-      if nextTrigger==currentTrigger+1
-        actualTriggerTime = GetSecs-timeStart; % this should be delayed by the same .5s delay when using the TDT
-        expectedTriggerTime = (nextTrigger-1)*TR; % relative to the time of the first trigger
-        currentTrigger = nextTrigger;
-        if actualTriggerTime <  expectedTriggerTime - triggerTolerance % stimulus was presented too early
-          beep;
-          displayMessage({sprintf('Trigger is early!! %f < %f',actualTriggerTime,expectedTriggerTime)});
-        elseif actualTriggerTime > expectedTriggerTime + triggerTolerance % stimulus is presented too late
-          beep;
-          displayMessage({sprintf('Trigger is late!! %f > %f)',actualTriggerTime,expectedTriggerTime)});
-        elseif ismember(TDT,tdtOptions(2))
-          displayMessage({sprintf('Spot on!! %f ~= %f)',actualTriggerTime,expectedTriggerTime)});
-        end
-        %update current condition information
-        updateTrialInfo(currentTrigger,nScans,stimulus(currentStim).condition,stimulus(currentStim).conditionName);
-      end
-        
-      if strcmp(lastButtonPressed,'stop run') %if stop has been pressed at that point, 
-        break                   %break out of the loop
+      if startPTBwithCircuit
+        % Clear the screen.
+        Screen('FillRect', window, grey);
+        Screen('Flip', window);
+      else
+        sca
+        % bring GUI back on top after setting up PTB
+        figure(hMainFigure)
       end
 
-    end
-    
-    if startPTBwithCircuit
-      % Clear the screen.
-      Screen('FillRect', window, grey);
-      Screen('Flip', window);
-    else
-      sca
-      % bring GUI back on top after setting up PTB
-      figure(hMainFigure)
-    end
-    
-    updateTrialInfo([],[],[]);
-    if ismember(TDT,tdtOptions(1))    %stop stimulus presentation
-      invoke(RM1,'SoftTrg',2); %prevents trigger from sending new signal
-    end
-    if strcmp(lastButtonPressed,'stop run')
-      for II = 1:3
-          beep, pause(0.5)
+      updateTrialInfo([],[],[]);
+      if ismember(TDT,tdtOptions(1))    %stop stimulus presentation
+        invoke(RM1,'SoftTrg',2); %prevents trigger from sending new signal
       end
-      displayMessage({'Run terminated by user!';' '});
-    else
-      displayMessage({sprintf('==> Run %d completed!',currentRun);' '});
-    end
+      if strcmp(lastButtonPressed,'stop run')
+        for II = 1:3
+            beep, pause(0.5)
+        end
+        displayMessage({'Run terminated by user!';' '});
+      else
+        displayMessage({sprintf('==> Run %d completed!',currentRun);' '});
+      end
     
+    end
   end
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RM1-related functions
@@ -960,11 +969,22 @@ function tdtMRIvision
 
   end
 
-  function initializePTB
+  function success = initializePTB
     
-    PsychDefaultSetup(1); % default settings
+    success = true;
+    try
+      PsychDefaultSetup(1); % default settings
+    catch
+      success = false;
+      displayMessage({'Could not initialize PsychToolbox, make sure it is installed'});
+      return;
+    end
     Screen('Preference', 'SkipSyncTests', 1);
     screenNumber = max(Screen('Screens')); % Screen number of external display
+    if screenNumber < 2
+      success = false;
+      displayMessages({'No external monitor detected'});
+    end      
     grey = WhiteIndex(screenNumber) / 2;
     [window, windowRect] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
