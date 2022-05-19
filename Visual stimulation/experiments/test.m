@@ -14,8 +14,8 @@ end
 if fieldIsNotDefined(params,'nBlockTypes')
   params.nBlockTypes = 2;
 end
-if fieldIsNotDefined(params,'blockDuration')
-  params.blockDuration = 8;
+if fieldIsNotDefined(params,'blockDurationS')
+  params.blockDurationS = 8;
 end
 if fieldIsNotDefined(params,'nBlockRepeats')
   params.nBlockRepeats = 3;
@@ -26,6 +26,10 @@ end
 if fieldIsNotDefined(params,'ISI')
   params.ISI = .2;
 end
+if fieldIsNotDefined(params,'widthDeg') % stimulus width in degrees of visual angle
+  params.widthDeg = 20;
+end
+
 
 if nargout==1
   return;
@@ -50,7 +54,9 @@ for iBlock = blocks
     stimulus(cStim).conditionName = 'Baseline';
     stimulus(cStim).condition = 0;
     stimulus(cStim).filename='None';
-    stimulus(cStim).duration= params.blockDuration;
+    stimulus(cStim).duration= params.blockDurationS;
+    stimulus(cStim).sizeDeg = [];
+    stimulus(cStim).centreDeg = [];
   else
     for iStim  = 1:params.stimPerBlock
       % randomly choose a stimulus in this block type
@@ -59,13 +65,17 @@ for iBlock = blocks
       stimulus(cStim).conditionName = blockTypes{iBlock};
       stimulus(cStim).condition = iBlock;
       stimulus(cStim).filename = stimFilenames{iBlock}{whichStim};
-      stimulus(cStim).duration = params.blockDuration/params.stimPerBlock - params.ISI;
+      stimulus(cStim).duration = params.blockDurationS/params.stimPerBlock - params.ISI;
+      stimulus(cStim).widthDeg = params.widthDeg;
+      stimulus(cStim).centreDeg = [0,0]; % X,Y in degrees relative to center of screen
       % end each presentation with a blank
       cStim = cStim+1;
       stimulus(cStim).conditionName = blockTypes{iBlock};
       stimulus(cStim).condition = iBlock;
       stimulus(cStim).filename = 'None';
       stimulus(cStim).duration = params.ISI; 
+      stimulus(cStim).widthDeg = [];
+      stimulus(cStim).centreDeg = [];
     end
   end
 end

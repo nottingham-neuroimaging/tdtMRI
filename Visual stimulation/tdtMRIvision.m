@@ -39,14 +39,6 @@ function tdtMRIvision
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
   TR = 2;          % the expected delay between image acquisitions (scanner pulses) in seconds
-%   stimTR = 8;      % The total duration of a stimulus. Should be a divisor of the TR (i.e. an integer number of stimuli should fit in the TR)
-%   minTDTcycle = 7;  % This is the shortest cycle that can be dealt with by the program considering the time delays of communicating with the TDT
-%                       % It will be used to decide when to start waiting for a trigger (minTR) and therefore how many scanner (or simulated) triggers should be skipped
-%                       % before receiving the next one
-%   TDTcycle = ceil(minTDTcycle/TR)*TR;  %the approximate time of a full cycle of the main program loop
-%   minTR = TDTcycle-TR/2;  % the minimum delay between consecutive received scanner pulses (useful to skip scanner pulses in continuous sequences)
-%   nStimTRs = TDTcycle/stimTR; %number of stimTR that fit in a TR
-%   nTRs = round(TDTcycle/stimTR);    %number of stimTRs that fit in a TDT cycle
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
   syncTR = 2;            % delay between simulated scanner pulses
@@ -65,10 +57,13 @@ function tdtMRIvision
   startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen
   screenNumber = [];
   window = []; % Window pointer for PTB3
-  windowRect = [];
-  grey = 0.5;
-  ifi = []; % interframe interval
+    grey = 0.5;
+%   ifi = []; % interframe interval
   triggerTolerance = [];
+  screenSizePixels = []; % screen size in pixels [left top right bottom]
+  screenWidthMm = []; % screen width in millimeters
+  screenHeightMm = []; % screen width in millimeters
+  screenDistanceCm = 53; % screen distance in centimeters
   
   % ~~~~~~~~~~~~~~~~~~~~ GUI ~~~~~~~~~~~~~~~~~~~~
   mainBottomGap=40;
@@ -986,21 +981,37 @@ function tdtMRIvision
       displayMessages({'No external monitor detected'});
     end      
     grey = WhiteIndex(screenNumber) / 2;
-    [window, windowRect] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
+    [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
+    [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber);
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
     % bring GUI back on top after setting up PTB
     figure(hMainFigure)
     
   end
 
-  function  prepareNextStim(stimulus, images)
+  function prepareNextStim(stimulus, images)
           
     Screen('FillRect', window, grey);
     if ~strcmp(stimulus.filename,'None')
+      % calculate stimulus position in pixelx from intended size and centre in degrees of visual angle
+      stimWitdhPixels = deg2pixels(stimulus.widthDeg,screenDistanceCm*10,screenWidthMm,screenSizePixels(3)); % Convert stimulus width to pixels
+      stimHeightPixels = stimWitdhPixels / size(images{stimulus.imageNum},2) * size(images{stimulus.imageNum},1);
+      stimCentrePixels = deg2pixels(stimulus.centreDeg,screenDistanceCm*10,screenWidthMm,screenSizePixels(3)); % Convert stimulus coords to pixels (relative to center of screen)
+      stimPosition = round([screenSizePixels(3)/2 + stimCentrePixels(1) - stimWitdhPixels/2, ...
+                            screenSizePixels(4)/2 + stimCentrePixels(2) - stimHeightPixels/2, ...
+                            screenSizePixels(3)/2 + stimCentrePixels(1) + stimWitdhPixels/2, ...
+                            screenSizePixels(4)/2 + stimCentrePixels(2) + stimHeightPixels/2]);
+      % display stimulus
       stimtexture = Screen('MakeTexture', window, images{stimulus.imageNum});
-      Screen('DrawTexture', window, stimtexture, [], []);
+      Screen('DrawTexture', window, stimtexture, [], stimPosition);
     end
+    
+  end
+
+  function pixels = deg2pixels(degrees, screenDistance, screenSize, screenSizePixels) % screen distance and size should be in the same units
+    
+    pixels = tan(deg2rad(degrees))*screenDistance/screenSize*screenSizePixels;
     
   end
 
