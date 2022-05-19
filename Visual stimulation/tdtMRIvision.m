@@ -31,6 +31,7 @@ function tdtMRIvision
   tdtOptions = {'RM1','None'};  %If you change the order of these options, changes are needed in code below
   TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
   displayStim = false;
+  flipStim = true;
   if ismember(TDT,tdtOptions(1:2))
     getTagValDelay = .5; % the approximate time it takes to get values from the RM1 (in sec)
   else
@@ -256,6 +257,14 @@ function tdtMRIvision
     'String','Display stimuli', ...
     'value',displayStim);
  
+  uicontrol('Parent',hMainFigure,...    %Stimulus display checkbox
+    'Callback',{@mainCallback,'flipStims'},...
+    'BackgroundColor',lGray,...
+    'Position',[XPos+Width+XGap YPos Width buttonHeight], ...
+    'Style','checkbox',...
+    'String','Flip stimuli', ...
+    'value',flipStim);
+ 
   YPos = 0.14;
   hTDT = uicontrol('Parent',hMainFigure,...    %TDT dropdown menu
     'Callback',{@mainCallback,'TDT'},...
@@ -381,9 +390,9 @@ function tdtMRIvision
       
       case('displayStims')
         displayStim=get(handleCaller,'Value');
-        if ~displayStim
-%           plotSequence(zeros(1,nStimTRs*signalSize()));
-        end
+        
+      case('flipStims')
+        flipStim=get(handleCaller,'Value');
         
       case('TDT')
         TDT=tdtOptions{get(handleCaller,'Value')};
@@ -654,7 +663,7 @@ function tdtMRIvision
       end
 
       Screen('TextSize',window, 50);
-      DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],true);
+      DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],flipStim);
       Screen('Flip', window);
 
       prepareNextStim(stimulus(1),images); % Prepare first stimulus
@@ -969,11 +978,13 @@ function tdtMRIvision
     success = true;
     try
       PsychDefaultSetup(1); % default settings
+%       PsychImaging('PrepareConfiguration');
     catch
       success = false;
       displayMessage({'Could not initialize PsychToolbox, make sure it is installed'});
       return;
     end
+%     PsychImaging('AddTask', 'General', 'FlipHorizontal'); % this doesn't work, so flipping is done in function prepareNextStim
     Screen('Preference', 'SkipSyncTests', 1);
     screenNumber = max(Screen('Screens')); % Screen number of external display
     if screenNumber < 2
@@ -981,7 +992,8 @@ function tdtMRIvision
       displayMessages({'No external monitor detected'});
     end      
     grey = WhiteIndex(screenNumber) / 2;
-    [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
+    [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
+%     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
     [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber);
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
@@ -1003,7 +1015,12 @@ function tdtMRIvision
                             screenSizePixels(3)/2 + stimCentrePixels(1) + stimWitdhPixels/2, ...
                             screenSizePixels(4)/2 + stimCentrePixels(2) + stimHeightPixels/2]);
       % display stimulus
-      stimtexture = Screen('MakeTexture', window, images{stimulus.imageNum});
+      if flipStim
+        thisImage = fliplr(images{stimulus.imageNum});
+      else
+        thisImage = images{stimulus.imageNum};
+      end
+      stimtexture = Screen('MakeTexture', window, thisImage);
       Screen('DrawTexture', window, stimtexture, [], stimPosition);
     end
     

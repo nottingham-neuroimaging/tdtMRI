@@ -5,6 +5,8 @@ function [params,stimulus] = test(params,TR)
     %conditionName (string)
     %duration (s)  
     %filename
+    %widthDeg (stimulus width in degrees of visual angle)
+    %centreDeg (stimulus center coordinates in degrees relative to center of screen)
 
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
@@ -55,7 +57,7 @@ for iBlock = blocks
     stimulus(cStim).condition = 0;
     stimulus(cStim).filename='None';
     stimulus(cStim).duration= params.blockDurationS;
-    stimulus(cStim).sizeDeg = [];
+    stimulus(cStim).widthDeg = [];
     stimulus(cStim).centreDeg = [];
   else
     for iStim  = 1:params.stimPerBlock
