@@ -24,7 +24,7 @@ switch(extension)
       fclose(fid);
 
       x = x(:)';
-      lines = regexp(x, newline, 'split');
+      lines = regexp(x, '\n', 'split');
       l1 = lines{1};
 
       parts = regexp(l1, char(44), 'split');
