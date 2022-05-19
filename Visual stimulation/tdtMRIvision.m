@@ -32,11 +32,6 @@ function tdtMRIvision
   TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
   displayStim = false;
   flipStim = true;
-  if ismember(TDT,tdtOptions(1:2))
-    getTagValDelay = .5; % the approximate time it takes to get values from the RM1 (in sec)
-  else
-    getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
-  end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
   TR = 2;          % the expected delay between image acquisitions (scanner pulses) in seconds
@@ -485,11 +480,8 @@ function tdtMRIvision
               displayMessage({'TDT circuit loaded and running!'})
             end
 
-            getTagValDelay = 500; % the approximate time it takes to get values from the RM1 (in msec)
-
           else
             displayMessage({'Not using TDT'});
-            getTagValDelay = 0; %if running without the TDT, then things happen when they're supposed to
           end
 
           displayMessage({''})
@@ -598,7 +590,7 @@ function tdtMRIvision
         end
         fprintf(logFile, '\nDynamic scan duration (ms): \t %d \n', TR);
         fprintf(logFile, '----------------------\n');
-        fprintf(logFile, 'scan\tcondition #\tcondition\tstimulus\tduration (s)\tapproximate time (MM:SS.FFF)\n');
+        fprintf(logFile, 'scan\tcondition #\tcondition\tstimulus\tduration (s)\tapproximate onset time (MM:SS.FFF)\n');
 
         try
           lcfOneRun() %% run the stimulation
@@ -901,6 +893,9 @@ function tdtMRIvision
             whichImage = length(imageNames);
           end
           images{whichImage} = imread(fullfile(pathString,'stimuli',[stimulus(iStim).filename '.jpeg']));
+          if stimulus(iStim).scramble
+            images{whichImage} = scramblePhase(images{whichImage});
+          end
           stimulus(iStim).imageNum = whichImage; % image index in images array
         end
           

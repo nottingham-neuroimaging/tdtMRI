@@ -7,6 +7,7 @@ function [params,stimulus] = oneBackTask(params,TR)
     %filename
     %widthDeg (stimulus width in degrees of visual angle)
     %centreDeg (stimulus center coordinates in degrees relative to center of screen)
+    %scramble (whether to phase-scramble the image)
 
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
@@ -39,7 +40,8 @@ if nargout==1
   return;
 end
 
-blockTypes = {'Females','Males'};
+blockTypes = {'Females','Males (S)'};
+scramble = [false,true];
 
 stimFilenames{1} = {'Female1','Female2','Female3','Female4','Female8',...
                     'Female10','Female11','Female13','Female19','Female20',...
@@ -70,6 +72,7 @@ for iBlock = blocks
     stimulus(cStim).duration= params.blockDurationS;
     stimulus(cStim).widthDeg = [];
     stimulus(cStim).centreDeg = [];
+    stimulus(cStim).scramble = [];
     
   else
     
@@ -100,6 +103,7 @@ for iBlock = blocks
       stimulus(cStim).duration = params.blockDurationS/params.stimPerBlock - params.ISI;
       stimulus(cStim).widthDeg = params.widthDeg;
       stimulus(cStim).centreDeg = [0,0]; % X,Y in degrees relative to center of screen
+      stimulus(cStim).scramble = scramble(iBlock);
       % end each presentation with a blank
       cStim = cStim+1;
       stimulus(cStim).conditionName = blockTypes{iBlock};
@@ -108,6 +112,7 @@ for iBlock = blocks
       stimulus(cStim).duration = params.ISI; 
       stimulus(cStim).widthDeg = [];
       stimulus(cStim).centreDeg = [];
+      stimulus(cStim).scramble = [];
     end
     
   end
