@@ -58,13 +58,20 @@ function tdtMRIvision
   startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen
   screenNumber = [];
   window = []; % Window pointer for PTB3
-    grey = 0.5;
+  white = 1;
+  grey = 0.5;
 %   ifi = []; % interframe interval
   triggerTolerance = [];
   screenSizePixels = []; % screen size in pixels [left top right bottom]
   screenWidthMm = []; % screen width in millimeters
   screenHeightMm = []; % screen width in millimeters
-  screenDistanceCm = 53; % screen distance in centimeters
+  screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
+  
+  showFixation = true;
+  fixCrossDimPix = 20;
+  % Set the line width for our fixation cross
+  fixationWidthPix = 4;
+
   
   % ~~~~~~~~~~~~~~~~~~~~ GUI ~~~~~~~~~~~~~~~~~~~~
   mainBottomGap=40;
@@ -252,7 +259,7 @@ function tdtMRIvision
   uicontrol('Parent',hMainFigure,...    %Stimulus display checkbox
     'Callback',{@mainCallback,'displayStims'},...
     'BackgroundColor',lGray,...
-    'Position',[XPos YPos Width buttonHeight], ...
+    'Position',[XPos YPos Width*2/3 buttonHeight], ...
     'Style','checkbox',...
     'String','Display stimuli', ...
     'value',displayStim);
@@ -260,10 +267,18 @@ function tdtMRIvision
   uicontrol('Parent',hMainFigure,...    %Stimulus display checkbox
     'Callback',{@mainCallback,'flipStims'},...
     'BackgroundColor',lGray,...
-    'Position',[XPos+Width+XGap YPos Width buttonHeight], ...
+    'Position',[XPos+Width*2/3+XGap YPos Width*2/3 buttonHeight], ...
     'Style','checkbox',...
     'String','Flip stimuli', ...
     'value',flipStim);
+ 
+  uicontrol('Parent',hMainFigure,...    %Stimulus display checkbox
+    'Callback',{@mainCallback,'showFixation'},...
+    'BackgroundColor',lGray,...
+    'Position',[XPos+Width*4/3+2*XGap YPos Width*2/3 buttonHeight], ...
+    'Style','checkbox',...
+    'String','Show fixation', ...
+    'value',showFixation);
  
   YPos = 0.14;
   hTDT = uicontrol('Parent',hMainFigure,...    %TDT dropdown menu
@@ -394,6 +409,9 @@ function tdtMRIvision
         
       case('flipStims')
         flipStim=get(handleCaller,'Value');
+        
+      case('showFixation')
+        showFixation=get(handleCaller,'Value');
         
       case('TDT')
         TDT=tdtOptions{get(handleCaller,'Value')};
@@ -663,8 +681,11 @@ function tdtMRIvision
         invoke(RM1,'SoftTrg',1);                                  %start run
       end
 
-      Screen('TextSize',window, 50);
-      DrawFormattedText(window,'Waiting for scanner...','center','center',WhiteIndex(screenNumber),[],flipStim);
+      Screen('TextSize',window, round(deg2pixels(4)));
+      DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
+      if showFixation
+        drawFixation();
+      end
       Screen('Flip', window);
 
       prepareNextStim(stimulus(1),images); % Prepare first stimulus
@@ -991,13 +1012,15 @@ function tdtMRIvision
     if screenNumber < 2
       success = false;
       displayMessages({'No external monitor detected'});
-    end      
-    grey = WhiteIndex(screenNumber) / 2;
+    end
+    white = WhiteIndex(screenNumber);
+    grey = white / 2;
     [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
 %     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
     [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber);
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
+    Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA'); % Set up alpha-blending for smooth (anti-aliased) lines
     % bring GUI back on top after setting up PTB
     figure(hMainFigure)
     
@@ -1008,9 +1031,9 @@ function tdtMRIvision
     Screen('FillRect', window, grey);
     if ~strcmp(stimulus.filename,'None')
       % calculate stimulus position in pixelx from intended size and centre in degrees of visual angle
-      stimWitdhPixels = deg2pixels(stimulus.widthDeg,screenDistanceCm*10,screenWidthMm,screenSizePixels(3)); % Convert stimulus width to pixels
+      stimWitdhPixels = deg2pixels(stimulus.widthDeg); % Convert stimulus width to pixels
       stimHeightPixels = stimWitdhPixels / size(images{stimulus.imageNum},2) * size(images{stimulus.imageNum},1);
-      stimCentrePixels = deg2pixels(stimulus.centreDeg,screenDistanceCm*10,screenWidthMm,screenSizePixels(3)); % Convert stimulus coords to pixels (relative to center of screen)
+      stimCentrePixels = deg2pixels(stimulus.centreDeg); % Convert stimulus coords to pixels (relative to center of screen)
       stimPosition = round([screenSizePixels(3)/2 + stimCentrePixels(1) - stimWitdhPixels/2, ...
                             screenSizePixels(4)/2 + stimCentrePixels(2) - stimHeightPixels/2, ...
                             screenSizePixels(3)/2 + stimCentrePixels(1) + stimWitdhPixels/2, ...
@@ -1025,11 +1048,25 @@ function tdtMRIvision
       Screen('DrawTexture', window, stimtexture, [], stimPosition);
     end
     
+    if showFixation
+      drawFixation();
+    end
+    
   end
 
-  function pixels = deg2pixels(degrees, screenDistance, screenSize, screenSizePixels) % screen distance and size should be in the same units
+  function drawFixation
     
-    pixels = tan(deg2rad(degrees))*screenDistance/screenSize*screenSizePixels;
+    % Draw the fixation cross in white, set it to the center of our screen and set good quality antialiasing
+    [xCenter, yCenter] = RectCenter(screenSizePixels);
+    fixationCoordsPix = [-fixCrossDimPix fixCrossDimPix 0 0; ...
+                         0 0 -fixCrossDimPix fixCrossDimPix];
+    Screen('DrawLines', window, fixationCoordsPix, fixationWidthPix, white, [xCenter yCenter], 2);
+   
+  end
+
+  function pixels = deg2pixels(degrees)
+    
+    pixels = tan(deg2rad(degrees))*screenDistanceCm*10/screenWidthMm*screenSizePixels(3);
     
   end
 
