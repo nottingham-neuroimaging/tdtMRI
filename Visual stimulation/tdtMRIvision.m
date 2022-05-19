@@ -15,12 +15,12 @@ function tdtMRIvision
   dGray = 0.5*ones(1,3);
   ScreenPos = get(0,'ScreenSize');
   FontSize = 13;
-  messageNLines = 13; %number of lines in the message window
+  messageNLines = 12; %number of lines in the message window
 
   rand('twister',sum(100*clock));     
 %     randn('state',sum(100*clock))
   participant = 'test';
-  nAddParam = 6;          %max number of parameters of the parameter function that are editable in the GUI
+  nAddParam = 8;          %max number of parameters of the parameter function that are editable in the GUI
   usedAddParams = 0;      %number of parameters that are actually editable (could be less than nAddParam)
   pathString = fileparts(which(mfilename));   %path to the function
   if isempty(pathString)
@@ -86,7 +86,7 @@ function tdtMRIvision
       'closeRequestFcn',{@mainCallback,'QuitExp'});
   
   Width = 0.2;
-  editHeight = 0.035;
+  editHeight = 0.032;
   XGap = 0.025;
   YGap = 0.0075;
   XPos = 0.525; 
@@ -191,7 +191,7 @@ function tdtMRIvision
       'String','Current run:');
 
   YPos = YPos-(editHeight+YGap);
-  hcurrentTrigger = uicontrol('Parent',hMainFigure,...        %Current trial
+  hCurrentTrigger = uicontrol('Parent',hMainFigure,...        %Current trial
       'BackgroundColor',mGray,...
       'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
@@ -343,6 +343,7 @@ function tdtMRIvision
   mainCallback(hParticipant,[],'Participant');
   mainCallback(hExpFunction,[],'expFunction'); %choses the first parameter function in the list and populate the additional parameter
   mainCallback(hTR,[],'TR'); %read the default TR value and update run information
+  mainCallback(hTDT,[],'TDT'); %read the default TDT value to set trigger tolerance
 
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Callback function
@@ -651,7 +652,7 @@ function tdtMRIvision
       % Compute stimulus parameters and load images for this run
       [nScans,stimulus,images] = getStimulusSequence();
       nStims = length(stimulus);
-
+      
       % display current stimulus in tdtMRI window
       hCursorT = plotSequence(stimulus);  %show timeline of the differnet blocks
 
@@ -891,11 +892,11 @@ function tdtMRIvision
   % ***** updateTrialInfo *****
   function updateTrialInfo(scanNumber,totalScans,conditionNumber,conditionName)
 
-    strg = get(hcurrentTrigger,'String'); Idx = strfind(strg,':');  
+    strg = get(hCurrentTrigger,'String'); Idx = strfind(strg,':');
     if ~isempty(scanNumber)
-      set(hcurrentTrigger,'String',[strg(1:Idx) sprintf(' %d / %d',scanNumber,totalScans)]);
+      set(hCurrentTrigger,'String',[strg(1:Idx) sprintf(' %d / %d',scanNumber,totalScans)]);
     else
-      set(hcurrentTrigger,'String',strg(1:Idx));
+      set(hCurrentTrigger,'String',strg(1:Idx));
     end  
 
     strg = get(hCurrentCondition,'String'); Idx = strfind(strg,':');  
@@ -936,7 +937,7 @@ function tdtMRIvision
       disp(id.message)
       return
     end
-    displayMessage({sprintf('Selected parameter function %s:',experimentFunction)})
+    displayMessage({sprintf('Selected parameter function: %s',experimentFunction)})
     %populate parameter text/edit controls
     paramNames = fieldnames(params);
     usedAddParams = min(length(paramNames),nAddParam);
