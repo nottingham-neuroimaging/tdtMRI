@@ -63,8 +63,8 @@ function tdtMRIvision
 %   ifi = []; % interframe interval
   triggerTolerance = [];
   screenSizePixels = []; % screen size in pixels [left top right bottom]
-  screenWidthMm = []; % screen width in millimeters
-  screenHeightMm = []; % screen width in millimeters
+  screenWidthMm = 375; % screen width in millimeters (AUB ThinkVision test monitor)
+  screenHeightMm = 300; % screen height in millimeters (AUB ThinkVision test monitor)
   screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
   
   showFixation = true;
@@ -681,7 +681,7 @@ function tdtMRIvision
         invoke(RM1,'SoftTrg',1);                                  %start run
       end
 
-      Screen('TextSize',window, round(deg2pixels(4)));
+      Screen('TextSize',window, round(deg2pixels(3)));
       DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
       if showFixation
         drawFixation();
@@ -1018,7 +1018,7 @@ function tdtMRIvision
     [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
 %     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
-    [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber);
+%     [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber); % this returns incorrect values
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
     Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA'); % Set up alpha-blending for smooth (anti-aliased) lines
     % bring GUI back on top after setting up PTB

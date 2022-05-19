@@ -32,7 +32,7 @@ if fieldIsNotDefined(params,'ISI')
   params.ISI = .2;
 end
 if fieldIsNotDefined(params,'widthDeg') % stimulus width in degrees of visual angle
-  params.widthDeg = 20;
+  params.widthDeg = 15;
 end
 
 if nargout==1
