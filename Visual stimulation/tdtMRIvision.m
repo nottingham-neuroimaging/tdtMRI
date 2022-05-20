@@ -887,9 +887,13 @@ function tdtMRIvision
         if strcmp(stimulus(iStim).filename,'None')
           stimulus(iStim).imageNum = 0;
         else
-          [~,whichImage] = ismember(stimulus(iStim).filename,imageNames);
+          thisImageName = stimulus(iStim).filename;
+          if stimulus(iStim).scramble
+            thisImageName = [thisImageName '_S'];
+          end
+          [~,whichImage] = ismember(thisImageName,imageNames);
           if ~whichImage
-            imageNames{end+1} = stimulus(iStim).filename;
+            imageNames{end+1} = thisImageName;
             whichImage = length(imageNames);
           end
           images{whichImage} = imread(fullfile(pathString,'stimuli',[stimulus(iStim).filename '.jpeg']));
