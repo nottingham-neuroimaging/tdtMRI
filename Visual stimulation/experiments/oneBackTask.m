@@ -33,14 +33,14 @@ if fieldIsNotDefined(params,'ISI')
   params.ISI = .2;
 end
 if fieldIsNotDefined(params,'widthDeg') % stimulus width in degrees of visual angle
-  params.widthDeg = 15;
+  params.widthDeg = 8;
 end
 
 if nargout==1
   return;
 end
 
-blockTypes = {'Faces','Faces (S)','Houses','Houses (S)'};
+blockTypes = {'Faces','scrambledFaces','Houses','scrambledHouses'};
 scramble = [false,true,false,true];
 
 % stimFilenames{1} = {'Female01','Female02','Female03','Female04','Female08',...
@@ -76,10 +76,15 @@ stimFilenames{4} = {'House01','House02','House03','House04','House05',...
 
 
 % block order
-blocks = [];
+blocks = 0; %temporary baseline block
 for iBlock = 1:params.nBlockRepeats
-  blocks = [blocks randperm(params.nBlockTypes+1)-1];
+  blockOrder = randperm(params.nBlockTypes+1)-1;
+  while blockOrder(1) == blocks(end) % never start with a block that the same as the last block
+    blockOrder = randperm(params.nBlockTypes+1)-1;
+  end
+  blocks = [blocks blockOrder];
 end
+blocks(1) = []; % remove temporary baseline block
 
 % create stimulus structure
 cStim = 0;
