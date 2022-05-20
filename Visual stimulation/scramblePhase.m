@@ -1,13 +1,14 @@
-function scrambledImg = scramblePhase(img)
+function scrambledImg = scramblePhase(img,range)
 
-minImg = min(img(:));
-maxImg = max(img(:));
 imgFft = fft2(img);
 mag = abs(imgFft);
 phase = angle(imgFft);
 randomPhase = angle(fft2(rand(size(phase))));
 scrambledPhase = phase + randomPhase;
 scrambledImg = real(ifft2(mag.*exp(1i*scrambledPhase)));
-scrambledImg(scrambledImg<minImg) = minImg;
-scrambledImg(scrambledImg>maxImg) = maxImg;
+if nargin == 2
+  scrambledImg(scrambledImg<range(1)) = range(1);
+  scrambledImg(scrambledImg>range(2)) = range(2);
+end
+scrambledImg = uint8(img);
 % figure;histogram(img);hold on;histogram(scrambledImg);

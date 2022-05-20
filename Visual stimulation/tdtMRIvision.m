@@ -54,7 +54,7 @@ function tdtMRIvision
   screenNumber = [];
   window = []; % Window pointer for PTB3
   white = 1;
-  grey = 0.5;
+  grey = 0.75;
 %   ifi = []; % interframe interval
   triggerTolerance = [];
   screenSizePixels = []; % screen size in pixels [left top right bottom]
@@ -62,7 +62,7 @@ function tdtMRIvision
   screenHeightMm = 300; % screen height in millimeters (AUB ThinkVision test monitor)
   screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
   
-  showFixation = true;
+  showFixation = false;
   fixCrossDimPix = 20;
   % Set the line width for our fixation cross
   fixationWidthPix = 4;
@@ -412,7 +412,7 @@ function tdtMRIvision
         TDT=tdtOptions{get(handleCaller,'Value')};
         switch(TDT)
           case tdtOptions{1}
-            triggerTolerance = 0.01;
+            triggerTolerance = 0.015;
           case tdtOptions{2}
             triggerTolerance = .1;
         end
@@ -720,7 +720,7 @@ function tdtMRIvision
           currentStim = currentStim + 1;
           if displayStim
             if stimulus(currentStim).imageNum
-              imshow(images{stimulus(currentStim).imageNum},'Parent',hStimulus);
+              imshow(images{stimulus(currentStim).imageNum},[0 255],'Parent',hStimulus);
             else
               cla(hStimulus);
             end
@@ -890,6 +890,7 @@ function tdtMRIvision
     
     if nargout==3 % loading and returning images
       imageNames = {};
+      displayMessage({'Pre-loading stimulus files...'})
     end
     % add cumulated onset field to each stimulus
     onset = 0;
@@ -910,8 +911,11 @@ function tdtMRIvision
             whichImage = length(imageNames);
           end
           images{whichImage} = imread(fullfile(pathString,'stimuli',[stimulus(iStim).filename '.jpeg']));
+          if size(images{whichImage},3)>1
+            images{whichImage} = images{whichImage}(:,:,1); % flatten RGB to grey scale
+          end
           if stimulus(iStim).scramble
-            images{whichImage} = scramblePhase(images{whichImage});
+            images{whichImage} = scramblePhase(images{whichImage},[0 255]);
           end
           stimulus(iStim).imageNum = whichImage; % image index in images array
         end
@@ -1032,7 +1036,7 @@ function tdtMRIvision
       displayMessages({'No external monitor detected'});
     end
     white = WhiteIndex(screenNumber);
-    grey = white / 2;
+    grey = white * 0.75;
     [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
 %     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
@@ -1066,7 +1070,7 @@ function tdtMRIvision
       Screen('DrawTexture', window, stimtexture, [], stimPosition);
     end
     
-    if showFixation
+    if showFixation || stimulus.condition == 0
       drawFixation();
     end
     
