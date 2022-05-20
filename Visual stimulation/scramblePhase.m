@@ -10,5 +10,5 @@ if nargin == 2
   scrambledImg(scrambledImg<range(1)) = range(1);
   scrambledImg(scrambledImg>range(2)) = range(2);
 end
-scrambledImg = uint8(img);
+scrambledImg = uint8(scrambledImg);
 % figure;histogram(img);hold on;histogram(scrambledImg);
