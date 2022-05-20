@@ -588,7 +588,7 @@ function tdtMRIvision
         for iParams = 1:length(paramNames)
           fprintf(logFile, '  %s = %s%s \n',paramNames{iParams},repmat(' ',1,maxParamNameLength-length(paramNames{iParams})),num2str(params.(paramNames{iParams})));
         end
-        fprintf(logFile, '\nDynamic scan duration (ms): \t %d \n', TR);
+        fprintf(logFile, '\nDynamic scan duration (s): \t %d \n', TR);
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcondition #\tcondition\tstimulus\tduration (s)\tapproximate onset time (MM:SS.FFF)\n');
 
@@ -684,7 +684,7 @@ function tdtMRIvision
 
       displayMessage({'Waiting for trigger...'});
       if strcmp(TDT,tdtOptions(2))
-        displayMessage({'(Trigger = Alt or Shift key)'});
+        displayMessage({'(Trigger = Alt key)'});
       end
 
       % wait for RM1 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
@@ -695,11 +695,15 @@ function tdtMRIvision
         switch(TDT)
           case tdtOptions(1)
             nextTrigger = double(invoke(RM1,'GetTagVal','Trigger')); %get the current trial number from TDT (should increase by one each time a trigger is received)
-          case tdtOptions(2)
-            nextTrigger = currentTrigger + KbCheck; %if no TDT RM1 is running, check the keyboard
+            timeStart = GetSecs;
+          case tdtOptions(2) %if no TDT RM1 is running, check the keyboard
+            [keyIsDown,timeStart] = KbCheck;
+            if keyIsDown
+              nextTrigger = currentTrigger + 1;
+              WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by the next kbCheck in the main loop
+            end
         end
       end
-      timeStart = GetSecs;
       currentTrigger = nextTrigger;
       if ~strcmp(lastButtonPressed,'stop run')
         displayMessage({'Received trigger'});
@@ -723,7 +727,7 @@ function tdtMRIvision
           end
           if currentStim <= nStims
             %print stimulus to log file
-            updatelogFile(stimulus(currentStim),currentTrigger,timeStim-timeStart); 
+            updatelogFile(stimulus(currentStim),currentTrigger,timeStim-timeStart);
             %update current condition information
             updateTrialInfo(currentTrigger,nScans,stimulus(currentStim).condition,stimulus(currentStim).conditionName);
           end
@@ -744,14 +748,23 @@ function tdtMRIvision
         % check the trigger number
         if ismember(TDT,tdtOptions(1)) && currentTrigger<nScans
           nextTrigger=double(invoke(RM1,'GetTagVal','Trigger')); % get the current trial number from TDT (should increase by one each time a trigger is received)
+          actualTriggerTime = GetSecs; % this should be delayed by the same .5s (?) delay when using the TDT
         else %or if there is no TDT running (or it is the last scan), see if the keyboard has been pressed
+          [keyIsDown,actualTriggerTime,keyCode] = KbCheck;
+          if keyIsDown
+            if ismember(18,(find(keyCode))) %18 = alt key = trigger
+              nextTrigger=currentTrigger + 1;
+            elseif ismember(16,(find(keyCode))) %16 = shift = response (only when not using TDT since response button doesn't work at AUB scanner)
+              %print stimulus to log file
+              updatelogFile(stimulus(currentStim),currentTrigger,actualTriggerTime-timeStart,'Response', actualTriggerTime - timeStim);
+            end
+          end
           WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by several successive iterations of the loop
-          nextTrigger=currentTrigger + KbCheck; 
         end
 
         % if we got the trigger for the next stimulus, check that it's at the predicted time
         if nextTrigger==currentTrigger+1
-          actualTriggerTime = GetSecs-timeStart; % this should be delayed by the same .5s delay when using the TDT
+          actualTriggerTime = actualTriggerTime-timeStart; % this should be delayed by the same .5s (?) delay when using the TDT
           expectedTriggerTime = (nextTrigger-1)*TR; % relative to the time of the first trigger
           currentTrigger = nextTrigger;
           if actualTriggerTime <  expectedTriggerTime - triggerTolerance % stimulus was presented too early
@@ -973,9 +986,15 @@ function tdtMRIvision
   end
 
   % ***** updatelogFile *****
-  function updatelogFile(stimulus,currentTrigger,timestamp)
+  function updatelogFile(stimulus,currentTrigger,timestamp, whichKey, TR)
+    
+    if nargin == 5 % this is a button press
+      stimulus.filename = whichKey;
+      stimulus.duration = TR;
+    end
     fprintf(logFile,'%d\t%d\t%s\t%s\t%2.3f\t%02d:%06.3f\n', ...
       currentTrigger,stimulus.condition,stimulus.conditionName,stimulus.filename,stimulus.duration,floor(timestamp/60),rem(timestamp,60));
+
   end
 
   % ***** displayMessage ***** 
