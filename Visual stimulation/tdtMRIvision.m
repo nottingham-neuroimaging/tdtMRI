@@ -672,7 +672,7 @@ function tdtMRIvision
         invoke(RM1,'SoftTrg',1);                                  %start run
       end
 
-      Screen('TextSize',window, deg2pixels(3));
+      Screen('TextSize',window, deg2pixels(1));
       DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
       if showFixation
         drawFixation(white);
