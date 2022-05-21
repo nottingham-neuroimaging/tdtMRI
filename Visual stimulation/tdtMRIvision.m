@@ -63,9 +63,8 @@ function tdtMRIvision
   screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
   
   showFixation = false;
-  fixCrossDimPix = 20;
-  % Set the line width for our fixation cross
-  fixationWidthPix = 4;
+  fixCrossLengthDeg = 1;
+  fixationWidthDeg = 0.1;
 
   
   % ~~~~~~~~~~~~~~~~~~~~ GUI ~~~~~~~~~~~~~~~~~~~~
@@ -673,7 +672,7 @@ function tdtMRIvision
         invoke(RM1,'SoftTrg',1);                                  %start run
       end
 
-      Screen('TextSize',window, round(deg2pixels(3)));
+      Screen('TextSize',window, deg2pixels(3));
       DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
       if showFixation
         drawFixation(white);
@@ -1089,15 +1088,15 @@ function tdtMRIvision
     
     % Draw the fixation cross in white, set it to the center of our screen and set good quality antialiasing
     [xCenter, yCenter] = RectCenter(screenSizePixels);
-    fixationCoordsPix = [-fixCrossDimPix fixCrossDimPix 0 0; ...
-                         0 0 -fixCrossDimPix fixCrossDimPix];
-    Screen('DrawLines', window, fixationCoordsPix, fixationWidthPix, color, [xCenter yCenter], 2);
+    fixationCoordsPix = deg2pixels([-fixCrossLengthDeg fixCrossLengthDeg 0 0; ...
+                                        0 0 -fixCrossLengthDeg fixCrossLengthDeg])/2;
+    Screen('DrawLines', window, fixationCoordsPix, deg2pixels(fixationWidthDeg), color, [xCenter yCenter], 2);
    
   end
 
   function pixels = deg2pixels(degrees)
     
-    pixels = tan(deg2rad(degrees))*screenDistanceCm*10/screenWidthMm*screenSizePixels(3);
+    pixels = ceil(tan(deg2rad(degrees))*screenDistanceCm*10/screenWidthMm*screenSizePixels(3));
     
   end
 
