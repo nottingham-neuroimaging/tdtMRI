@@ -1032,13 +1032,17 @@ function tdtMRIvision
     Screen('Preference', 'SkipSyncTests', 1);
     screenNumber = max(Screen('Screens')); % Screen number of external display
     if screenNumber < 2
-      success = false;
-      displayMessages({'No external monitor detected'});
+      displayMessage({'No external monitor detected: running in debug mode'});
     end
     white = WhiteIndex(screenNumber);
+    % Open an on screen window and color it grey.
     grey = white * 0.75;
-    [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
-%     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% Open an on screen window using PsychImaging and color it grey.
+    if screenNumber < 2 % if drawing on main screen, open a sub-window
+      [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey,round(0.4*Screen('Rect',screenNumber)));
+    else % otherwise open a full-screen window
+      [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
+    end
+%     [window, screenSizePixels] = PsychImaging('OpenWindow', screenNumber, grey);% using PsychImaging instead of Screen
 %     ifi = Screen('GetFlipInterval', window);% Measure the vertical refresh rate of the monitor
 %     [screenWidthMm,screenHeightMm] = Screen('DisplaySize',screenNumber); % this returns incorrect values
     Priority(MaxPriority(window));% Retrieve the maximum priority number and set max priority
