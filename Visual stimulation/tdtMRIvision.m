@@ -676,7 +676,7 @@ function tdtMRIvision
       Screen('TextSize',window, round(deg2pixels(3)));
       DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
       if showFixation
-        drawFixation();
+        drawFixation(white);
       end
       Screen('Flip', window);
 
@@ -1071,18 +1071,23 @@ function tdtMRIvision
     end
     
     if showFixation || stimulus.condition == 0
-      drawFixation();
+      if strcmp(stimulus.conditionName,'Interval')
+        fixationColor = white*0.25;
+      else
+        fixationColor = white;
+      end
+      drawFixation(fixationColor);
     end
     
   end
 
-  function drawFixation
+  function drawFixation(color)
     
     % Draw the fixation cross in white, set it to the center of our screen and set good quality antialiasing
     [xCenter, yCenter] = RectCenter(screenSizePixels);
     fixationCoordsPix = [-fixCrossDimPix fixCrossDimPix 0 0; ...
                          0 0 -fixCrossDimPix fixCrossDimPix];
-    Screen('DrawLines', window, fixationCoordsPix, fixationWidthPix, white, [xCenter yCenter], 2);
+    Screen('DrawLines', window, fixationCoordsPix, fixationWidthPix, color, [xCenter yCenter], 2);
    
   end
 

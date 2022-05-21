@@ -23,6 +23,9 @@ end
 if fieldIsNotDefined(params,'blockDurationS')
   params.blockDurationS = 30;
 end
+if fieldIsNotDefined(params,'blockGapS')
+  params.blockGapS = 4;
+end
 if fieldIsNotDefined(params,'stimPerBlock')
   params.stimPerBlock = 20;
 end
@@ -119,6 +122,17 @@ blocks(1) = []; % remove temporary baseline block
 % create stimulus structure
 cStim = 0;
 for iBlock = blocks
+  
+  cStim = cStim+1; % gap between blocks
+  stimulus(cStim).conditionName = 'Interval';
+  stimulus(cStim).condition = 0;
+  stimulus(cStim).filename='None';
+  stimulus(cStim).duration= params.blockGapS;
+  stimulus(cStim).widthDeg = [];
+  stimulus(cStim).centreDeg = [];
+  stimulus(cStim).scramble = [];
+  
+  
   if ~iBlock % Baseline
     
     cStim = cStim+1;
