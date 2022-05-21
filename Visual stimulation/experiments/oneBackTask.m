@@ -36,12 +36,20 @@ if fieldIsNotDefined(params,'ISI')
   params.ISI = .2;
 end
 if fieldIsNotDefined(params,'widthDeg') % stimulus width in degrees of visual angle
-  params.widthDeg = 8;
+  params.widthDeg = 4;
 end
 
 if nargout==1
   return;
 end
+
+if rem(params.blockDurationS,TR)
+  error('Block duration must be an exact multiple of the TR');
+end
+if rem(params.blockGapS,TR)
+  error('Gap between blocks must be an exact multiple of the TR');
+end
+
 
 blockTypes = {'Faces','scrambledFaces','Houses','scrambledHouses','English','scrambledEnglish','Arabic','scrambledArabic','Telugu','scrambledTelugu'};
 scramble = [false,true,false,true,false,true,false,true,false,true];
