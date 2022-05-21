@@ -34,10 +34,10 @@ function tdtMRIvision
   flipStim = true;
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
-  TR = 2;          % the expected delay between image acquisitions (scanner pulses) in seconds
+  TR = 1.8;          % the expected delay between image acquisitions (scanner pulses) in seconds
 
   simulatedTriggerToggle=0; %state of the simulated trigger switch
-  syncTR = 2;            % delay between simulated scanner pulses
+  syncTR = 1.8;            % delay between simulated scanner pulses
   currentRun=0;    
   completedRuns=0;          %to keep track of completed runs
 

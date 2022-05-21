@@ -21,22 +21,22 @@ if fieldIsNotDefined(params,'nBlockRepeats')
   params.nBlockRepeats = 2;
 end
 if fieldIsNotDefined(params,'blockDurationS')
-  params.blockDurationS = 30;
+  params.blockDurationS = 18;
 end
 if fieldIsNotDefined(params,'blockGapS')
-  params.blockGapS = 4;
+  params.blockGapS = 3.6;
 end
 if fieldIsNotDefined(params,'stimPerBlock')
-  params.stimPerBlock = 20;
+  params.stimPerBlock = 15;
 end
 if fieldIsNotDefined(params,'repeatPeriod')
-  params.repeatPeriod = 6; % average number of stimuli between target repeated stimuli
+  params.repeatPeriod = 5; % average number of stimuli between target repeated stimuli
 end
 if fieldIsNotDefined(params,'ISI')
-  params.ISI = .2;
+  params.ISI = .7;
 end
 if fieldIsNotDefined(params,'widthDeg') % stimulus width in degrees of visual angle
-  params.widthDeg = 4;
+  params.widthDeg = 5;
 end
 
 if nargout==1
