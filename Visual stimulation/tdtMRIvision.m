@@ -587,7 +587,7 @@ function tdtMRIvision
         for iParams = 1:length(paramNames)
           fprintf(logFile, '  %s = %s%s \n',paramNames{iParams},repmat(' ',1,maxParamNameLength-length(paramNames{iParams})),num2str(params.(paramNames{iParams})));
         end
-        fprintf(logFile, '\nDynamic scan duration (s): \t %d \n', TR);
+        fprintf(logFile, '\nDynamic scan duration (s): \t %.3f \n', TR);
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcondition #\tcondition\tstimulus\tduration (s)\tapproximate onset time (MM:SS.FFF)\n');
 
