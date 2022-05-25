@@ -58,10 +58,13 @@ function tdtMRIvision
 %   ifi = []; % interframe interval
   triggerTolerance = [];
   screenSizePixels = []; % screen size in pixels [left top right bottom]
-  screenWidthMm = 375; % screen width in millimeters (AUB ThinkVision test monitor)
-  screenHeightMm = 300; % screen height in millimeters (AUB ThinkVision test monitor)
-  screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
   
+  monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner'};
+  monitor = monitors{2};
+  screenWidthMm = []; % screen width in millimeters
+  screenHeightMm = []; % screen height in millimeters
+  screenDistanceCm = []; % screen distance in centimeters
+
   showFixation = false;
   fixCrossLengthDeg = 1;
   fixationWidthDeg = 0.1;
@@ -210,7 +213,7 @@ function tdtMRIvision
       'BackgroundColor',mGray,...
       'Position',[XPos YPos 2*Width+XGap editHeight],...
       'Style','text',...
-      'String','Time remaining till end of run:');
+      'String','Time remaining till end of run: ');
 
 %   YPos = YPos-(4.7*editHeight+2*YGap);
   hMessage = uicontrol('Parent',hMainFigure,...             %Message window
@@ -277,10 +280,17 @@ function tdtMRIvision
   YPos = 0.14;
   hTDT = uicontrol('Parent',hMainFigure,...    %TDT dropdown menu
     'Callback',{@mainCallback,'TDT'},...
-    'Position',[XPos YPos Width buttonHeight], ...
+    'Position',[XPos YPos Width/3 buttonHeight], ...
     'Style','popupmenu',...
     'String',tdtOptions, ...
     'value',find(ismember(tdtOptions,TDT)));
+
+  hMonitor = uicontrol('Parent',hMainFigure,...    %Monitor dropdown menu
+    'Callback',{@mainCallback,'Monitor'},...
+    'Position',[XPos+Width/3+XGap/2 YPos Width*2/3 buttonHeight], ...
+    'Style','popupmenu',...
+    'String',monitors, ...
+    'value',find(ismember(monitors,monitor)));
 
 %%%%%%%%%%%%%%%% pushbuttons to control circuit/runs
   YPos = 0.15;
@@ -353,7 +363,7 @@ function tdtMRIvision
   mainCallback(hExpFunction,[],'expFunction'); %choses the first parameter function in the list and populate the additional parameter
   mainCallback(hTR,[],'TR'); %read the default TR value and update run information
   mainCallback(hTDT,[],'TDT'); %read the default TDT value to set trigger tolerance
-
+  mainCallback(hMonitor,[],'Monitor'); %read the default Monitor value to set trigger tolerance
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Callback function
   % each case corresponds to control in the GUI
@@ -414,6 +424,19 @@ function tdtMRIvision
             triggerTolerance = 0.015;
           case tdtOptions{2}
             triggerTolerance = .1;
+        end
+        
+      case('Monitor')
+        monitor=monitors{get(handleCaller,'Value')};
+        switch(monitor)
+          case 'AUB thinkvision (57 cm distance)'
+            screenWidthMm = 375; % screen width in millimeters (AUB ThinkVision test monitor)
+            screenHeightMm = 300; % screen height in millimeters (AUB ThinkVision test monitor)
+            screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
+          case 'AUBMC Philips 3T scanner'
+            screenWidthMm = 650; % AUBMC Philips 3T MRI screen width in millimeters
+            screenHeightMm = 390; % AUBMC Philips 3T MRI screen height in millimeters
+            screenDistanceCm = 139; % AUBMC Philips 3T MRI screen distance in centimeters 
         end
         
       case 'SynTrig' %user presses the simulated trigger button (this is only possible during a run)
@@ -489,6 +512,7 @@ function tdtMRIvision
           set(hStartRun,'Enable','on')
           set(hStopCircuit,'Enable','on')
           set(hTDT,'Enable','off')
+          set(hMonitor,'Enable','off')
           displayMessage({'Proceed by pressing <Start run> ...'});
         end        
 
@@ -508,6 +532,7 @@ function tdtMRIvision
             set(hStartCircuit,'Enable','on')
         end
         set(hTDT,'Enable','on')
+        set(hMonitor,'Enable','on')
         if exist('hMessage','var')
             displayMessage({'Circuit stopped';''});
         end
@@ -1035,7 +1060,7 @@ function tdtMRIvision
     end
     white = WhiteIndex(screenNumber);
     % Open an on screen window and color it grey.
-    grey = white * 0.75;
+    grey = white * 0.5;
     if screenNumber < 2 % if drawing on main screen, open a sub-window
       [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey,round(0.4*Screen('Rect',screenNumber)));
     else % otherwise open a full-screen window
