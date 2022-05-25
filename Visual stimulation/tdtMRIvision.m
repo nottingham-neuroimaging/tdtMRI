@@ -698,7 +698,7 @@ function tdtMRIvision
       end
 
       Screen('TextSize',window, deg2pixels(1));
-      DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,flipStim);
+      DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,false,flipStim);
       if showFixation
         drawFixation(white);
       end
@@ -1090,7 +1090,7 @@ function tdtMRIvision
                             screenSizePixels(4)/2 + stimCentrePixels(2) + stimHeightPixels/2]);
       % display stimulus
       if flipStim
-        thisImage = fliplr(images{stimulus.imageNum});
+        thisImage = flipud(images{stimulus.imageNum});
       else
         thisImage = images{stimulus.imageNum};
       end
