@@ -54,10 +54,11 @@ function tdtMRIvision
   screenNumber = [];
   window = []; % Window pointer for PTB3
   white = 1;
-  grey = 0.75;
+  grey = 0.5;
 %   ifi = []; % interframe interval
   triggerTolerance = [];
   screenSizePixels = []; % screen size in pixels [left top right bottom]
+  debugScreenWidth = 0.6; % width of debug screen as a proportion of the monitor's screen
   
   monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner'};
   monitor = monitors{2};
@@ -916,6 +917,7 @@ function tdtMRIvision
       imageNames = {};
       displayMessage({'Pre-loading stimulus files...'})
     end
+    
     % add cumulated onset field to each stimulus
     onset = 0;
     for iStim = 1:length(stimulus)
@@ -938,10 +940,20 @@ function tdtMRIvision
           if size(images{whichImage},3)>1
             images{whichImage} = images{whichImage}(:,:,1); % flatten RGB to grey scale
           end
-          if stimulus(iStim).scramble
+          if stimulus(iStim).scramble % scramble phase
             images{whichImage} = scramblePhase(images{whichImage},[0 255]);
           end
+          if stimulus(iStim).gaussianWidth % apply gaussian window (using background value for 0)
+            imageDims = size(images{whichImage});
+            imageCenter = ceil(imageDims/2);
+            sigma = ceil(imageDims(2)/4);
+            [X,Y] = meshgrid(1:imageDims(1),1:imageDims(2));
+            gaussian = exp(-((X-imageCenter(1)).^2/(2*sigma^2)+(Y-imageCenter(2)).^2/(2*sigma^2))); % 2D Gaussian function in XY plane
+            
+            images{whichImage} = uint8((double(images{whichImage}) - grey).*gaussian + grey); % assumes the range is 0-255 (i.e. using Screen rather than PsychImaging)
+          end
           stimulus(iStim).imageNum = whichImage; % image index in images array
+          
         end
           
       end
@@ -1062,7 +1074,7 @@ function tdtMRIvision
     % Open an on screen window and color it grey.
     grey = white * 0.5;
     if screenNumber < 2 % if drawing on main screen, open a sub-window
-      [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey,round(0.4*Screen('Rect',screenNumber)));
+      [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey,round(debugScreenWidth*Screen('Rect',screenNumber)));
     else % otherwise open a full-screen window
       [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
     end

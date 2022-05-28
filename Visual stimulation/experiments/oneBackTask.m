@@ -8,6 +8,7 @@ function [params,stimulus] = oneBackTask(params,TR)
     %widthDeg (stimulus width in degrees of visual angle)
     %centreDeg (stimulus center coordinates in degrees relative to center of screen)
     %scramble (whether to phase-scramble the image)
+    %gaussianWidth (width parameter of a Gaussian used to mask the image, treated as a boolean for now)
 
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)
@@ -119,7 +120,7 @@ for iBlock = blocks
   stimulus(cStim).widthDeg = [];
   stimulus(cStim).centreDeg = [];
   stimulus(cStim).scramble = [];
-  
+  stimulus(cStim).gaussianWidth = [];
   
   if ~iBlock % Baseline
     
@@ -131,6 +132,7 @@ for iBlock = blocks
     stimulus(cStim).widthDeg = [];
     stimulus(cStim).centreDeg = [];
     stimulus(cStim).scramble = [];
+    stimulus(cStim).gaussianWidth = [];
     
   else
     
@@ -158,6 +160,7 @@ for iBlock = blocks
       stimulus(cStim).widthDeg = params.widthDeg;
       stimulus(cStim).centreDeg = [0,0]; % X,Y in degrees relative to center of screen
       stimulus(cStim).scramble = scramble(iBlock);
+      stimulus(cStim).gaussianWidth = params.widthDeg/5;
       % end each presentation with a blank
       cStim = cStim+1;
       stimulus(cStim).conditionName = blockTypes{iBlock};
@@ -167,6 +170,7 @@ for iBlock = blocks
       stimulus(cStim).widthDeg = [];
       stimulus(cStim).centreDeg = [];
       stimulus(cStim).scramble = [];
+      stimulus(cStim).gaussianWidth = [];
     end
     
   end
