@@ -29,8 +29,8 @@ end
 if fieldIsNotDefined(params,'stimPerBlock')
   params.stimPerBlock = 15;
 end
-if fieldIsNotDefined(params,'repeatPeriod')
-  params.repeatPeriod = 5; % average number of stimuli between target repeated stimuli
+if fieldIsNotDefined(params,'repeatsPerBlock')
+  params.repeatsPerBlock = 3; % exact number of stimulus repeats in a block (for one-back task)
 end
 if fieldIsNotDefined(params,'ISI')
   params.ISI = .7;
@@ -134,30 +134,26 @@ for iBlock = blocks
     
   else
     
-    repeatPreviousStim = false;
-    whichStim = randperm(length(stimFilenames{iBlock}),1); %choose first stimulus at random
-    previousStim = whichStim;
-    for iStim  = 1:params.stimPerBlock
+    % randomly draw which stims will be repeated
+    nDifferentStims = params.stimPerBlock-params.repeatsPerBlock;
+    blockStims = randperm(length(stimFilenames{iBlock}),nDifferentStims);
+    % randomly draw which of these will be repeated
+    repeated = 1:params.repeatsPerBlock;
+    while ismember(1,diff(repeated)) % require that two consecutive stimuli are never repeated (?)
+      repeated = sort(randperm(nDifferentStims,params.repeatsPerBlock));
+    end
+    % apply the repetitions
+    for stim = fliplr(repeated)
+      blockStims = blockStims([1:stim stim stim+1:end]);
+    end
+    
+    for stim  = blockStims
       cStim = cStim+1;
-      if repeatPreviousStim % repeated stimulus (1-back task target)
-        whichStim = previousStim;
-        repeatPreviousStim = false; % never repeat twice in a row
-      else
-        % randomly choose a stimulus in this block type (without repetition)
-        while whichStim == previousStim
-          whichStim = randperm(length(stimFilenames{iBlock}),1);
-        end
-        % decide whether to repeat this stimulus next
-        if iStim > 1 % (never repeat the first stimulus)
-          repeatPreviousStim =  randperm(params.repeatPeriod,1) == params.repeatPeriod;
-        end
-      end
-      previousStim = whichStim;
       
       % stimulus properties
       stimulus(cStim).conditionName = blockTypes{iBlock};
       stimulus(cStim).condition = iBlock;
-      stimulus(cStim).filename = stimFilenames{iBlock}{whichStim};
+      stimulus(cStim).filename = stimFilenames{iBlock}{stim};
       stimulus(cStim).duration = params.blockDurationS/params.stimPerBlock - params.ISI;
       stimulus(cStim).widthDeg = params.widthDeg;
       stimulus(cStim).centreDeg = [0,0]; % X,Y in degrees relative to center of screen
