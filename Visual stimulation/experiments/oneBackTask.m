@@ -31,7 +31,7 @@ if fieldIsNotDefined(params,'stimPerBlock')
   params.stimPerBlock = 15;
 end
 if fieldIsNotDefined(params,'repeatsPerBlock')
-  params.repeatsPerBlock = 3; % exact number of stimulus repeats in a block (for one-back task)
+  params.repeatsPerBlock = 2; % exact number of stimulus repeats in a block (for one-back task)
 end
 if fieldIsNotDefined(params,'ISI')
   params.ISI = .7;

@@ -422,7 +422,7 @@ function tdtMRIvision
         TDT=tdtOptions{get(handleCaller,'Value')};
         switch(TDT)
           case tdtOptions{1}
-            triggerTolerance = 0.015;
+            triggerTolerance = 0.020;
           case tdtOptions{2}
             triggerTolerance = .1;
         end
