@@ -1114,7 +1114,7 @@ function tdtMRIvision
       if strcmp(stimulus.conditionName,'Interval')
         fixationColor = white*0.25;
       else
-        fixationColor = white;
+        fixationColor = 0;
       end
       drawFixation(fixationColor);
     end
