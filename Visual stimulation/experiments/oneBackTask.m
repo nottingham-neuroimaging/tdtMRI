@@ -1,14 +1,14 @@
 function [params,stimulus] = oneBackTask(params,TR)
 
 % stimulus = struct array with fields:    
-    %condition (integer, 0 = baseline)
-    %conditionName (string)
-    %duration (s)  
-    %filename
-    %widthDeg (stimulus width in degrees of visual angle)
-    %centreDeg (stimulus center coordinates in degrees relative to center of screen)
-    %scramble (whether to phase-scramble the image)
-    %gaussianWidth (width parameter of a Gaussian used to mask the image, treated as a boolean for now)
+%      condition: condition numerical id (integer, 0 = baseline)
+%  conditionName: condition name (string)
+%       duration: duration of stimulus (s)
+%       filename: file contain the stimulus (in tdtMRI\Visual stimulation\stimuli)
+%       widthDeg: stimulus width in degrees of visual angle
+%      centreDeg: stimulus center coordinates in degrees relative to center of screen
+%       scramble: whether to phase-scramble the image
+%  gaussianWidth: width parameter of a Gaussian used to mask the image (in degrees)
 
 %default parameters: these are the parameters that will appear in the main
 %window and can be changed between runs (the first few anyway)

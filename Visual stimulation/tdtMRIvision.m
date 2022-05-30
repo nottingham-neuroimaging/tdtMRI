@@ -946,7 +946,7 @@ function tdtMRIvision
           if stimulus(iStim).gaussianWidth % apply gaussian window (using background value for 0)
             imageDims = size(images{whichImage});
             imageCenter = ceil(imageDims/2);
-            sigma = ceil(imageDims(2)/4);
+            sigma = ceil(stimulus(iStim).gaussianWidth/stimulus(iStim).widthDeg*imageDims(2));
             [X,Y] = meshgrid(1:imageDims(1),1:imageDims(2));
             gaussian = exp(-((X-imageCenter(1)).^2/(2*sigma^2)+(Y-imageCenter(2)).^2/(2*sigma^2))); % 2D Gaussian function in XY plane
             
