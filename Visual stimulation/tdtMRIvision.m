@@ -29,9 +29,17 @@ function tdtMRIvision
   end
 
   tdtOptions = {'RM1','None'};  %If you change the order of these options, changes are needed in code below
-  TDT = tdtOptions{1}; %set to None or Soundcard to debug without switching the TDT on
+  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+      TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
+  else
+      TDT = tdtOptions{1};
+  end
   displayStim = false;
-  flipStim = true;
+  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+      flipStim = 0;
+  else
+      flipStim = 1;
+  end
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
   TR = 1.8;          % the expected delay between image acquisitions (scanner pulses) in seconds
@@ -61,7 +69,12 @@ function tdtMRIvision
   debugScreenWidth = 0.6; % width of debug screen as a proportion of the monitor's screen
   
   monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner'};
-  monitor = monitors{2};
+  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+    monitor = monitors{1};
+  else
+      monitor = monitors{2};
+  end
+  
   screenWidthMm = []; % screen width in millimeters
   screenHeightMm = []; % screen height in millimeters
   screenDistanceCm = []; % screen distance in centimeters
@@ -430,7 +443,7 @@ function tdtMRIvision
       case('Monitor')
         monitor=monitors{get(handleCaller,'Value')};
         switch(monitor)
-          case 'AUB thinkvision (57 cm distance)'
+          case 'AUB thinkvision (57 cm)'
             screenWidthMm = 375; % screen width in millimeters (AUB ThinkVision test monitor)
             screenHeightMm = 300; % screen height in millimeters (AUB ThinkVision test monitor)
             screenDistanceCm = 57; % screen distance in centimeters (at 57 cm, 1 deg = 1 cm)
@@ -699,7 +712,11 @@ function tdtMRIvision
       end
 
       Screen('TextSize',window, deg2pixels(1));
-      DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,false,flipStim);
+      if  strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+         DrawFormattedText(window,'Starting Soon...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,false,flipStim);
+      else
+         DrawFormattedText(window,'Waiting for scanner...       Get ready!      ','center','center',WhiteIndex(screenNumber),24,false,flipStim);
+      end
       if showFixation
         drawFixation(white);
       end
