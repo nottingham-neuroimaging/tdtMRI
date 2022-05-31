@@ -967,7 +967,7 @@ function tdtMRIvision
             [X,Y] = meshgrid(1:imageDims(1),1:imageDims(2));
             gaussian = exp(-((X-imageCenter(1)).^2/(2*sigma^2)+(Y-imageCenter(2)).^2/(2*sigma^2))); % 2D Gaussian function in XY plane
             
-            images{whichImage} = uint8((double(images{whichImage}) - grey).*gaussian + grey); % assumes the range is 0-255 (i.e. using Screen rather than PsychImaging)
+            images{whichImage} = uint8((double(images{whichImage}) - 127).*gaussian + 127); % assumes the range is 0-255 (i.e. using Screen rather than PsychImaging)
           end
           stimulus(iStim).imageNum = whichImage; % image index in images array
           
