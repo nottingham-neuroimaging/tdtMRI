@@ -183,7 +183,7 @@ for iBlock = blocks
       stimulus(cStim).widthDeg = params.widthDeg;
       stimulus(cStim).centreDeg = [0,0]; % X,Y in degrees relative to center of screen
       stimulus(cStim).scramble = scramble(iBlock);
-      stimulus(cStim).gaussianWidth = params.widthDeg/4;
+      stimulus(cStim).gaussianWidth = params.widthDeg/5;
       % end each presentation with a blank
       cStim = cStim+1;
       stimulus(cStim).conditionName = blockTypes{iBlock};
