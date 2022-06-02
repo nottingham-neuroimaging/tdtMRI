@@ -12,7 +12,7 @@ function fixationInstructions = fixationInstructions
 % The correct codes were obtained by passing the typed Arabic strings throught the online Arabic reshaper
 % at https://reshaper.mpcabd.xyz/ and then casting the result as doubles
 arabicInstructions{1} = [65166 65170 65267 65198 65239 32 65155 65194 65170 65255 32 65233 65262 65203]; % mat2str(double('????? ???? ???'))
-arabicInstructions{2} = [33 65165 65203 65176 65228 65194 92 65265]; % mat2str(double('!?????\?'))
+arabicInstructions{2} = [33 65165 65261 65194 65228 65176 65203 65165]; % mat2str(double('!??????'))
 
 if  strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
   fixationInstructions = [double('Starting Soon... ') arabicInstructions{1} ...
