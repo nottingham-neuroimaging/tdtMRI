@@ -15,8 +15,8 @@ arabicInstructions{1} = [65166 65170 65267 65198 65239 32 65155 65194 65170 6525
 arabicInstructions{2} = [33 65165 65261 65194 65228 65176 65203 65165]; % mat2str(double('!??????'))
 
 if  strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
-  fixationInstructions = [double('   Starting Soon...     ') arabicInstructions{1} double('   ') ...
-                          double('      Get ready!        ') arabicInstructions{2}];
+  fixationInstructions = [double('   Starting Soon...     ') arabicInstructions{1} ...
+                          double('  Get ready!              ') arabicInstructions{2}];
 else
   fixationInstructions = [double('Waiting for scanner...') arabicInstructions{1} ...
                           double('      Get ready!             ') arabicInstructions{2}];
