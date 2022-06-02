@@ -1,7 +1,7 @@
 % This function returns the instruction string for the fixation screen, including Arabic characters
 % It is saved in a different file because Arabic characters are not correctly 
-% copied across by git. It should therefore not be added/committed to the Git repository
-% but modified computer by computer
+% copied across by git. Changes to lines including Arabic characters should not be added/committed
+% to the Git repository but modified computer by computer
 
 function fixationInstructions = fixationInstructions
 
@@ -15,10 +15,10 @@ arabicInstructions{1} = [65166 65170 65267 65198 65239 32 65155 65194 65170 6525
 arabicInstructions{2} = [33 65165 65261 65194 65228 65176 65203 65165]; % mat2str(double('!??????'))
 
 if  strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
-  fixationInstructions = [double('Starting Soon... ') arabicInstructions{1} ...
-                          double('      Get ready!  ') arabicInstructions{2} double('     ')];
+  fixationInstructions = [double('   Starting Soon...     ') arabicInstructions{1} double('   ') ...
+                          double('      Get ready!        ') arabicInstructions{2}];
 else
-  fixationInstructions = [double('Waiting for scanner... ') arabicInstructions{1} ...
-                          double('      Get ready!  ') arabicInstructions{2} double('     ')];
+  fixationInstructions = [double('Waiting for scanner...') arabicInstructions{1} ...
+                          double('      Get ready!             ') arabicInstructions{2}];
 end
 
