@@ -713,11 +713,11 @@ function tdtMRIvision
 
       Screen('TextSize',window, deg2pixels(1));
       if  strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
-        fixationString = 'Starting Soon...       Get ready!      ';
+        fixationString = 'Starting Soon... ﺎﺒﻳﺮﻗ ﺃﺪﺒﻧ ﻑﻮﺳ      Get ready! !ﻱ\ﺪﻌﺘﺳﺍ     ';
       else
-        fixationString = 'Waiting for scanner...       Get ready!      ';
+        fixationString = 'Waiting for scanner... ﺎﺒﻳﺮﻗ ﺃﺪﺒﻧ ﻑﻮﺳ      Get ready! !ﻱ\ﺪﻌﺘﺳﺍ     ';
       end
-      DrawFormattedText(window,fixationString,'center','center',WhiteIndex(screenNumber),24,false,flipStim);
+      DrawFormattedText(window,double(fixationString),'center','center',WhiteIndex(screenNumber),35,false,flipStim);
       if showFixation
         drawFixation(white);
       end
