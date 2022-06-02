@@ -9,7 +9,7 @@ function fixationInstructions = fixationInstructions
 % (Possibly because Matlab versions before 2020a do not encode m files in UTF-8)
 % Casting the Arabic characters to double in a function saved in a file gives the wrong codes
 % whereas doing it from the terminal gives the correct ones
-% The correct codes were obtained by passing the typed Arabic strings throught the online Arabic reshaper
+% The correct codes were obtained by passing the typed Arabic strings through the online Arabic reshaper
 % at https://reshaper.mpcabd.xyz/ and then casting the result as doubles
 arabicInstructions{1} = [65166 65170 65267 65198 65239 32 65155 65194 65170 65255 32 65233 65262 65203]; % mat2str(double('????? ???? ???'))
 arabicInstructions{2} = [33 65165 65261 65194 65228 65176 65203 65165]; % mat2str(double('!??????'))

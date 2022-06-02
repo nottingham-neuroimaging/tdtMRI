@@ -72,7 +72,7 @@ function tdtMRIvision
   if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
     monitor = monitors{1};
   else
-      monitor = monitors{2};
+    monitor = monitors{2};
   end
   
   screenWidthMm = []; % screen width in millimeters
@@ -712,7 +712,7 @@ function tdtMRIvision
       end
 
       Screen('TextSize',window, deg2pixels(1));
-      DrawFormattedText(window,fixationInstructions(),'center','center',WhiteIndex(screenNumber),35,false,flipStim);
+      DrawFormattedText(window,fixationInstructions(),'center','center',WhiteIndex(screenNumber),40,false,flipStim);
       if showFixation
         drawFixation(white);
       end
