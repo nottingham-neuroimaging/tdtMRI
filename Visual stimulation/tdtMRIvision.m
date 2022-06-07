@@ -800,8 +800,8 @@ function tdtMRIvision
               %print stimulus to log file
               updatelogFile(stimulus(currentStim),currentTrigger,actualTriggerTime-timeStart,'Response', actualTriggerTime - timeStim);
             end
+            WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by several successive iterations of the loop
           end
-          WaitSecs(0.15); % wait a bit so that the keyboard press is not caught by several successive iterations of the loop
         end
 
         % if we got the trigger for the next stimulus, check that it's at the predicted time
