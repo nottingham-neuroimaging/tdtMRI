@@ -724,7 +724,7 @@ function tdtMRIvision
 
       displayMessage({'Waiting for trigger...'});
       if strcmp(TDT,tdtOptions(2))
-        displayMessage({'(Trigger = Alt key)'});
+        displayMessage({'(Trigger = Return key)'});
       end
 
       % wait for RM1 to receive the scanner/simulated trigger (i.e. start the stimulus + increase trial counter by one)
@@ -792,7 +792,8 @@ function tdtMRIvision
         else %or if there is no TDT running (or it is the last scan), see if the keyboard has been pressed
           [keyIsDown,actualTriggerTime,keyCode] = KbCheck; %(only when not using TDT since response button doesn't work at AUB scanner)
           if keyIsDown
-            if ismember(18,(find(keyCode))) %18 = alt key = trigger
+            if ismember(13,(find(keyCode))) %13 = return key = trigger
+%             if ismember(18,(find(keyCode))) %18 = alt key = trigger
               nextTrigger=currentTrigger + 1;
             else % if any other key
             % elseif ismember(16,(find(keyCode))) %16 = shift = response
