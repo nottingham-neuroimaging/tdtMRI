@@ -709,6 +709,8 @@ function tdtMRIvision
       if ismember(TDT,tdtOptions(1))
         invoke(RM1,'SetTagVal','NTrials',nStims+1);     %set this to something larger than the number of dynamic scans
         invoke(RM1,'SoftTrg',1);                                  %start run
+      elseif ismember(TDT,tdtOptions(2))
+        ListenChar(2); % suppress keypress output in Matlab window
       end
 
       Screen('TextSize',window, deg2pixels(1));
@@ -788,11 +790,12 @@ function tdtMRIvision
           nextTrigger=double(invoke(RM1,'GetTagVal','Trigger')); % get the current trial number from TDT (should increase by one each time a trigger is received)
           actualTriggerTime = GetSecs; % this should be delayed by the same .5s (?) delay when using the TDT
         else %or if there is no TDT running (or it is the last scan), see if the keyboard has been pressed
-          [keyIsDown,actualTriggerTime,keyCode] = KbCheck;
+          [keyIsDown,actualTriggerTime,keyCode] = KbCheck; %(only when not using TDT since response button doesn't work at AUB scanner)
           if keyIsDown
             if ismember(18,(find(keyCode))) %18 = alt key = trigger
               nextTrigger=currentTrigger + 1;
-            elseif ismember(16,(find(keyCode))) %16 = shift = response (only when not using TDT since response button doesn't work at AUB scanner)
+            else % if any other key
+            % elseif ismember(16,(find(keyCode))) %16 = shift = response
               %print stimulus to log file
               updatelogFile(stimulus(currentStim),currentTrigger,actualTriggerTime-timeStart,'Response', actualTriggerTime - timeStim);
             end
@@ -837,6 +840,8 @@ function tdtMRIvision
       updateTrialInfo([],[],[]);
       if ismember(TDT,tdtOptions(1))    %stop stimulus presentation
         invoke(RM1,'SoftTrg',2); %prevents trigger from sending new signal
+      elseif ismember(TDT,tdtOptions(2))
+        ListenChar(0); % suppress keypress output in Matlab window
       end
       if strcmp(lastButtonPressed,'stop run')
         for II = 1:3
