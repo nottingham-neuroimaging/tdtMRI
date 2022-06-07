@@ -29,13 +29,13 @@ function tdtMRIvision
   end
 
   tdtOptions = {'RM1','None'};  %If you change the order of these options, changes are needed in code below
-  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV','SBS000065920D'})
       TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
   else
       TDT = tdtOptions{1};
   end
   displayStim = false;
-  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV','SBS000065920D'})
       flipStim = 0;
   else
       flipStim = 1;
@@ -69,7 +69,7 @@ function tdtMRIvision
   debugScreenWidth = 0.6; % width of debug screen as a proportion of the monitor's screen
   
   monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner'};
-  if strcmp(getenv('COMPUTERNAME'),'DESKTOP-S355HDV')
+  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV'})
     monitor = monitors{1};
   else
     monitor = monitors{2};
