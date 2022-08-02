@@ -27,19 +27,25 @@ function tdtMRIvision
     fprintf('Function %s must be on your path or in the current folder\n',mfilename);
     return;
   end
-
+  
+  computerName = getenv('COMPUTERNAME');
+  if isempty(computerName) && isunix
+    [~,computerName] = system('hostname'); % on Linux
+    computerName = computerName(1:end-1);
+  end
   tdtOptions = {'RM1','None'};  %If you change the order of these options, changes are needed in code below
-  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV','SBS000065920D'})
-      TDT = tdtOptions{2}; %set to None or Soundcard to debug without switching the TDT on
+  if ismember(computerName,{'DESKTOP-S355HDV','SBS000065920D','boyd'}) || isempty(getenv('COMPUTERNAME'))
+      TDT = tdtOptions{2}; %set to None to debug without switching the TDT on
   else
       TDT = tdtOptions{1};
   end
   displayStim = false;
-  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV','SBS000065920D'})
+  if ismember(computerName,{'DESKTOP-S355HDV','SBS000065920D','boyd'}) || isempty(getenv('COMPUTERNAME'))
       flipStim = 0;
   else
       flipStim = 1;
   end
+  doNotDebug = strcmp(computerName,'boyd');
 
   sampleDuration = 1/24.4140625;  %the duration of a TDT sample in milliseconds
   TR = 1.8;          % the expected delay between image acquisitions (scanner pulses) in seconds
@@ -58,7 +64,11 @@ function tdtMRIvision
   HActX = [];      % handle to the activeX figure (invisible)
   circuitRunning=false;   
   
-  startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen
+  if strcmp(computerName,'boyd')
+    startPTBwithCircuit = false;
+  else
+    startPTBwithCircuit = true; % if true, PTB starts when starting the TDT circuit and different runs use the same PTB screen
+  end
   screenNumber = [];
   window = []; % Window pointer for PTB3
   white = 1;
@@ -68,11 +78,14 @@ function tdtMRIvision
   screenSizePixels = []; % screen size in pixels [left top right bottom]
   debugScreenWidth = 0.6; % width of debug screen as a proportion of the monitor's screen
   
-  monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner'};
-  if ismember(getenv('COMPUTERNAME'),{'DESKTOP-S355HDV'})
-    monitor = monitors{1};
-  else
-    monitor = monitors{2};
+  monitors = {'AUB thinkvision (57 cm)', 'AUBMC Philips 3T scanner', 'ViewPixx'};
+  switch(computerName)
+    case 'DESKTOP-S355HDV'
+      monitor = monitors{1};
+    case 'boyd'
+      monitor = monitors{3};
+    otherwise
+      monitor = monitors{2};
   end
   
   screenWidthMm = []; % screen width in millimeters
@@ -81,7 +94,7 @@ function tdtMRIvision
 
   showFixation = false;
   fixCrossLengthDeg = 1;
-  fixationWidthDeg = 0.1;
+  fixationWidthDeg = 0.05;
 
   
   % ~~~~~~~~~~~~~~~~~~~~ GUI ~~~~~~~~~~~~~~~~~~~~
@@ -377,7 +390,7 @@ function tdtMRIvision
   mainCallback(hExpFunction,[],'expFunction'); %choses the first parameter function in the list and populate the additional parameter
   mainCallback(hTR,[],'TR'); %read the default TR value and update run information
   mainCallback(hTDT,[],'TDT'); %read the default TDT value to set trigger tolerance
-  mainCallback(hMonitor,[],'Monitor'); %read the default Monitor value to set trigger tolerance
+  mainCallback(hMonitor,[],'Monitor'); %read the default Monitor value
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Callback function
   % each case corresponds to control in the GUI
@@ -450,7 +463,11 @@ function tdtMRIvision
           case 'AUBMC Philips 3T scanner'
             screenWidthMm = 650; % AUBMC Philips 3T MRI screen width in millimeters
             screenHeightMm = 390; % AUBMC Philips 3T MRI screen height in millimeters
-            screenDistanceCm = 139; % AUBMC Philips 3T MRI screen distance in centimeters 
+            screenDistanceCm = 139; % or 166 to avoid interference from the magnet; AUBMC Philips 3T MRI screen distance in centimeters 
+          case 'ViewPixx' % monitor in Fisk lab
+            screenWidthMm = 533; % screen width in millimeters
+            screenHeightMm = 300; % screen height in millimeters
+            screenDistanceCm = 166; % distance equivalent to that in the MR scanner
         end
         
       case 'SynTrig' %user presses the simulated trigger button (this is only possible during a run)
@@ -1086,13 +1103,16 @@ function tdtMRIvision
 %     PsychImaging('AddTask', 'General', 'FlipHorizontal'); % this doesn't work, so flipping is done in function prepareNextStim
     Screen('Preference', 'SkipSyncTests', 1);
     screenNumber = max(Screen('Screens')); % Screen number of external display
-    if screenNumber < 2
+    if screenNumber < 2 && ~doNotDebug
       displayMessage({'No external monitor detected: running in debug mode'});
+      debug=true;
+    else
+      debug = false;
     end
     white = WhiteIndex(screenNumber);
     % Open an on screen window and color it grey.
     grey = white * 0.5;
-    if screenNumber < 2 % if drawing on main screen, open a sub-window
+    if debug % if drawing on main screen, open a sub-window
       [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey,round(debugScreenWidth*Screen('Rect',screenNumber)));
     else % otherwise open a full-screen window
       [window, screenSizePixels] = Screen('OpenWindow', screenNumber, grey);% Open an on screen window using Screen and color it grey.
