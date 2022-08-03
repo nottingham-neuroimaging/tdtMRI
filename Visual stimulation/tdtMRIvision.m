@@ -635,7 +635,7 @@ function tdtMRIvision
         
         %write log file header
         refreshParameters;
-        logFile = fopen(sprintf('%s\\%s_%s_%s%02d.txt',pwd,participant,datestr(now,'yyyy-mm-dd_HH-MM-SS'),experimentFunction,currentRun),'wt');
+        logFile = fopen(sprintf('%s_%s_%s%02d.txt',participant,datestr(now,'yyyy-mm-dd_HH-MM-SS'),experimentFunction,currentRun),'wt');
         fprintf(logFile, 'Current date and time: \t %s \n',datestr(now));
         fprintf(logFile, 'Subject: \t \t %s \n', participant);
         fprintf(logFile, 'Experiment function: \t %s \n', experimentFunction);
