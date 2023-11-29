@@ -149,7 +149,7 @@ function tdtMRI
   noiseBufferSize = [];
   
   AMfrequency = 0; % default amplitude modulation frequency(0 = no modulation)
-  NLevel = 35;%35;              % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
+  NLevel = 35;                    % intended background noise level expressed in "masking" level (if Nlevel=Slevel, the signal would be just detectable)
   SNR1dB = 10*log10(10^(1/10)-1); % SNR1dB is the SNR of a just detectable signal embedded in noise:
                                   % a signal is just detectable if S+N is more intense than N alone by about 1 dB (Zwicker) 
                                   % solve 10*log10((IS+IN)/IN) = 1 dB for IS/IN and then apply 10*log10; IS/IN = signal/noise intensity; 
@@ -195,7 +195,7 @@ function tdtMRI
       'DefaultUicontrolUnits','normalized',...
       'closeRequestFcn',{@mainCallback,'QuitExp'});
 
-  Width = 0.2;
+  Width = 0.21;
   editHeight = 0.035;
   XGap = 0.025;
   YGap = 0.0075;
@@ -260,7 +260,7 @@ function tdtMRI
       'BackgroundColor',mGray,...
       'Position',[XPos YPos Width editHeight],...
       'Style','text',...
-      'String','Noise Level (dB):');
+      'String','Noise Masking Level (dB):');
   hNLevel = uicontrol('Parent',hMainFigure, ...
       'BackgroundColor',[1 1 1],...
       'Callback',{@mainCallback,'noiseLevel'},...
@@ -559,7 +559,7 @@ YPos = YPos-(editHeight+YGap);
         plotSignal(zeros(1,nStimTRs*signalSize()));
         
       case('noiseLevel')
-        NLevel=eval(get(handleCaller,'String'))-SNR1dB; % actual background noise level (dB SPL) (instead of adding SNR1dB to the signal levels, we subtract it from the noise level)
+        NLevel=eval(get(handleCaller,'String')); % background noise level (dB masking level)
 
       case('AMfrequency')
         AMfrequency=eval(get(handleCaller,'String')); % 
@@ -890,23 +890,23 @@ YPos = YPos-(editHeight+YGap);
         
         fNoise = lcfMakeNoise(noiseBufferSize,sampleDuration,0);  % synthesize broadband noise 
 %         sqrt(mean(fNoise'.^2))
-        checkSignalLevel(fNoise*10^((NLevel+calibrationGainLeft-LEE)/20),[]);
+        checkSignalLevel(fNoise*10^((NLevel+calibrationGainLeft-LEE-SNR1dB)/20),[]);
         noisePlayer = [];
         if ismember(TDT,tdtOptions(1:2))
           %attenuate/increase level to fill 90% of voltage range
           scaling = maxVoltage*0.9/max(max(fNoise));
           %write background noise to TDT
           invoke(RP2,'WriteTagVEX','FNoise',0,'I16',round(scaling*fNoise/maxVoltage*2^15));  % fill the noise buffer with 16-bit integers           
-          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE)/20)/scaling); %set the noise level
-          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE)/20)/scaling); %set the noise level
+          invoke(RP2,'SetTagVal','NAmpL',10^((NLevel+calibrationGainLeft-LEE-SNR1dB)/20)/scaling); %set the noise level
+          invoke(RP2,'SetTagVal','NAmpR',10^((NLevel+calibrationGainRight-LEE-SNR1dB)/20)/scaling); %set the noise level
           invoke(RP2,'SetTagVal','SplitScale',maxVoltage/(2^15-1)); %set the scaling factor that converts the signals from 16-bit integers to floats after splitting the two channels
           invoke(RP2,'SetTagVal','minTR',round((minTR)/sampleDuration)+1); 
         elseif ismember(TDT,tdtOptions(4))
           % 2016-06-07 mod by Jaakko, play noise in the background with audiocard
           durationSec = getNumberTRs()*TR/1000; 
           fNoiseLong=repmat(fNoise,1,1+ceil(durationSec/(size(fNoise,2)/24414.0625))); % noise 11-22s longer than actual stimulation due to ceil(), should be ok
-          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE)/20);
-          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE)/20);
+          fNoiseLong(1,:)=fNoiseLong(1,:)*10^((NLevel+calibrationGainLeft-LEE-SNR1dB)/20);
+          fNoiseLong(2,:)=fNoiseLong(2,:)*10^((NLevel+calibrationGainRight-LEE-SNR1dB)/20);
           noisePlayer = audioplayer(fNoiseLong,24414.0625); 
           play(noisePlayer);
         end
@@ -922,7 +922,7 @@ YPos = YPos-(editHeight+YGap);
           fprintf(logFile, '  %s = %s%s \n',paramNames{iParams},repmat(' ',1,maxParamNameLength-length(paramNames{iParams})),num2str(params.(paramNames{iParams})));
         end
         fprintf(logFile, '\nDynamic scan duration (ms): \t %d \n', TR);
-        fprintf(logFile, 'Noise Level: \t %d dB (%.3f dB SPL)\n', NLevel, NLevel-SNR1dB);
+        fprintf(logFile, 'Noise Level: \t %d dB/ERB, masking level (%.3f dB SPL/ERB)\n', NLevel, NLevel-SNR1dB); % (Before Nov. 2023, this was giving the dB SPL/ERB as the first value and the dB SPL value in brackets was wrong, unless the value had been changed manually in the GUI, in which case the labels were correct, but both values were overestimated by 5.9 dB)
         fprintf(logFile, '----------------------\n');
         fprintf(logFile, 'scan\tcond.\tfreq.(kHz)\tlevel(dB)\tbandwidth(kHz)\tduration(ms)\tname\tapproximate time (MM:SS)\n');
 
